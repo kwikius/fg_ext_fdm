@@ -1,11 +1,14 @@
-Test controlling FlightGear externally
---------------------------------------
+Controlling FlightGear externally using C++
+-------------------------------------------
+
+[![Youtube - Control FlightGear externally from C++](http://img.youtube.com/vi/27LC2WRK0Rk/2.jpg)](http://www.youtube.com/watch?v=27LC2WRK0Rk "YouTube - Control FlightGear externally from C++")
 
 Description
 -----------
  Simple example of how to control Flightgear externally, using a socket. 
  The aircraft is suspended in space.
- Use the joystick to pose the model in roll, pitch and yaw. <a href="#note1" id="note1back"><sup>1</sup></a>
+ Use the joystick to pose the model in roll, pitch and yaw. <a href="#note1" id="note1back"><sup>1</sup></a> <br>
+ [Watch on Youtube](https://www.youtube.com/watch?v=27LC2WRK0Rk)
 
 Requires
 --------
@@ -33,10 +36,10 @@ Run
    - Twiddling sticks should now cause  aircraft to change attitude
 
 Issues/ToDo
--------
+-----------
   - You may need to change channels or directions of channels on your transmitter to get things working smoothly.
-  - Edit the gps location in $(project)/scripts/flightgear.sh to your own scenery
-  - <a id="note1" href="#note1back">[1]</a>  Currently the joystick uses World Frame. Would be nice to provide and option for Joystick to be Model Frame
+  - Allow the gps location in $(project)/scripts/flightgear.sh and src/main.cpp to your own area/scenery.
+  - <a id="note1" href="#note1back">[1]</a>  Currently the joystick uses World Frame. Would be nice to provide an option for Joystick to be Model Frame
 
 Acknowledgements
 ---------------
