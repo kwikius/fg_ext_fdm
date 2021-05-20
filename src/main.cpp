@@ -177,8 +177,6 @@ namespace {
 
       fdm.version = htonl(FG_NET_FDM_VERSION);
 
-     // static constexpr auto D2R = 3.14159 / 180.0;
-
       quan::angle::rad constexpr latitude = 50.7381_deg;
       quan::angle::rad constexpr longitude = 0.2494_deg;
 
@@ -226,7 +224,7 @@ namespace {
       **/
       auto get_js_angle = [&js](int32_t i)->quan::angle::rad {
          // -1 to 1
-         double const raw_value = (js.get_channel(i) * js_sign[i] / joystick_half_range) ;
+         double const raw_value = (js.get_channel(i) * js_sign[i]) / joystick_half_range ;
          // stick pos as angle
          return raw_value * stick_half_max_angle;
       };
@@ -249,14 +247,14 @@ namespace {
       result += turn_rate * update_period;
 
      /**
-      * @brief cap pose vector to +- 180 degrees
+      * @brief cap pose vector to 0..360 degrees
       **/
       for ( int32_t i = 0; i < 3; ++i){
          // result[i] = modulo(result[i]);
-         while ( result[i] < -180.0_deg){
+         while ( result[i] < 0.0_deg){
             result[i] += 360.0_deg;
          }
-         while ( result[i] > 180.0_deg){
+         while ( result[i] >= 360.0_deg){
             result[i] -= 360.0_deg;
          }
       }
