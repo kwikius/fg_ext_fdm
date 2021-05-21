@@ -258,10 +258,20 @@ namespace {
             result[i] -= 360.0_deg;
          }
       }
+      fprintf(stdout,"\rroll = %3f pitch = %3f yaw = %3f"
+         ,quan::angle::deg{result[0]}.numeric_value()
+         ,quan::angle::deg{result[1]}.numeric_value()
+         ,quan::angle::deg{result[2]}.numeric_value()
+      );
+      fflush(stdout);
    }
 
    void update(FGNetFDM & fdm, pose_t const & pose , turn_rate_t const & turn_rate)  
    {
+/*
+    TODO. Should probably provide either 1 or other of postion or angular velocity but not both
+    see https://forum.flightgear.org/viewtopic.php?t=2654
+*/
       fdm.phi = htonf(static_cast<float>(pose.x.numeric_value())) ;
       fdm.theta = htonf(static_cast<float>(pose.y.numeric_value()) );
       fdm.psi = htonf(static_cast<float>(pose.z.numeric_value()));
