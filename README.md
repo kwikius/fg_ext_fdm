@@ -39,11 +39,13 @@ Issues/ToDo
 -----------
   - You may need to change channels or directions of channels on your transmitter to get things working smoothly.
   - Allow the gps location in $(project)/scripts/flightgear.sh and src/main.cpp to your own area/scenery.
-  - <a id="note1" href="#note1back">[1]</a>  Currently the joystick uses World Frame. Would be nice to provide an option for Joystick to be Model Frame
+  - <a id="note1" href="#note1back">[1]</a>  Currently whether the joystick uses World Frame or ModelFrame is hard coded.
+     Todo use command line args
 
 Acknowledgements
 ---------------
 This work is derived from [David Calkin's example in the FlightGear source code](https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/examples/netfdm/)
+Also uses calculations from FlightGear and CRRCSim
 
 
 
