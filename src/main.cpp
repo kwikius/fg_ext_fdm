@@ -13,11 +13,14 @@
 
 #include <quan/joystick.hpp>
 #include <quan/angle.hpp>
-#include <quan/three_d/vect.hpp>
+#include <quan/three_d/out/vect.hpp>
+#include <quan/three_d/out/quat.hpp>
 #include <quan/time.hpp>
 #include <quan/length.hpp>
 #include <quan/reciprocal_time.hpp>
 #include <quan/frequency.hpp>
+#include <quan/abs.hpp>
+#include <quan/constants/constant.hpp>
 
 /*
   Derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/examples/netfdm/
@@ -126,8 +129,10 @@ namespace {
     };
 
    bool setup_socket();
-   void update(pose_t & result,quan::joystick const & js);
-   void update(FGNetFDM & fdm, pose_t const & pose , turn_rate_t const & turn_rate); 
+   void update_turnrate(quan::joystick const & js);
+   void update_world_frame(pose_t & result);
+   void update_model_frame(pose_t & result);
+   void update(FGNetFDM & fdm, pose_t const & pose); 
    void usleep(quan::time::us const & t);
    void run();
 }
@@ -194,6 +199,22 @@ namespace {
       fdm.warp = htonl(1);
       fdm.visibility = htonf(visibility.numeric_value());
    }
+
+   /**
+    * @brief use model frame or worldframe for joystick 
+   **/
+   bool use_model_frame = true;
+
+   void update(pose_t & result,quan::joystick const & js)
+   {
+     update_turnrate(js);
+
+     if ( use_model_frame){
+        update_model_frame(result);
+     }else{
+        update_world_frame(result);
+     }
+   }
    
    void run()
    {
@@ -205,42 +226,42 @@ namespace {
       for(;;){
          usleep(update_period);
          update(pose,js);
-         update(fdm,pose,turn_rate);
+         update(fdm,pose);
          sendto(sendSocket,(void *)&fdm,sizeof(fdm),0,(struct sockaddr *)&sendAddr,sizeof(sendAddr));
+      }
+    }
+
+    void update_turnrate(quan::joystick const & js)
+    {
+
+     /**
+      * @brief turn raw joystick number into a representation 
+      * of the joystick axis in range  -1 to 1
+      **/
+      auto get_js_percent = [&js](int32_t i)->double {
+         return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
+      };
+     /**
+      * @brief work out stick percent
+      **/
+      quan::three_d::vect<double> const stick_percent = {
+         get_js_percent(roll_idx), 
+         get_js_percent(pitch_idx),
+         get_js_percent(yaw_idx)
+      };
+      
+      /// @brief calc turn rates vector
+      for ( int32_t i = 0; i < 3; ++i){
+         turn_rate[i] = max_turn_rate[i] * stick_percent[i] ;
       }
     }
 
    /**
     * @brief update current pose according to joystick positions
    **/
-   void update( pose_t & result,quan::joystick const & js)
+   void update_world_frame( pose_t & result)
    {
-      /// @brief max angle of stick move from stick-center
-      quan::angle::deg constexpr stick_half_max_angle = 30_deg;
-
-     /**
-      * @brief turn raw joystick number into a representation 
-      *  of the actual angle of the joystick axis
-      **/
-      auto get_js_angle = [&js](int32_t i)->quan::angle::rad {
-         // -1 to 1
-         double const raw_value = (js.get_channel(i) * js_sign[i]) / joystick_half_range ;
-         // stick pos as angle
-         return raw_value * stick_half_max_angle;
-      };
-     /**
-      * @brief work out stick angles
-      **/
-      pose_t const stick_angle = {
-         get_js_angle(roll_idx), 
-         get_js_angle(pitch_idx),
-         get_js_angle(yaw_idx)
-      };
-      
-      /// @brief calc turn rates vector
-      for ( int32_t i = 0; i < 3; ++i){
-         turn_rate[i] = max_turn_rate[i] * (stick_angle[i] / stick_half_max_angle);
-      }
+     
      /**
       * @brief increment pose vector with new turn_rate
       **/
@@ -266,7 +287,7 @@ namespace {
       fflush(stdout);
    }
 
-   void update(FGNetFDM & fdm, pose_t const & pose , turn_rate_t const & turn_rate)  
+   void update(FGNetFDM & fdm, pose_t const & pose )  
    {
 /*
     TODO. Should probably provide either 1 or other of postion or angular velocity but not both
@@ -281,6 +302,171 @@ namespace {
       fdm.psidot = htonf(static_cast<float>(turn_rate.z.numeric_value()));
       
    };
+
+/*
+  from simgear https://github.com/FlightGear/simgear/math/SGQuat.hxx
+  Copyright (C) 2006-2009  Mathias Froehlich - Mathias.Froehlich@web.de
+   /// Return a quaternion from euler angles
+  static SGQuat fromEulerRad(T z, T y, T x)
+  {
+    SGQuat q;
+    T zd2 = T(0.5)*z; T yd2 = T(0.5)*y; T xd2 = T(0.5)*x;
+    T Szd2 = sin(zd2); T Syd2 = sin(yd2); T Sxd2 = sin(xd2);
+    T Czd2 = cos(zd2); T Cyd2 = cos(yd2); T Cxd2 = cos(xd2);
+    T Cxd2Czd2 = Cxd2*Czd2; T Cxd2Szd2 = Cxd2*Szd2;
+    T Sxd2Szd2 = Sxd2*Szd2; T Sxd2Czd2 = Sxd2*Czd2;
+    q.w() = Cxd2Czd2*Cyd2 + Sxd2Szd2*Syd2;
+    q.x() = Sxd2Czd2*Cyd2 - Cxd2Szd2*Syd2;
+    q.y() = Cxd2Czd2*Syd2 + Sxd2Szd2*Cyd2;
+    q.z() = Cxd2Szd2*Cyd2 - Sxd2Czd2*Syd2;
+    return q;
+  }
+*/
+
+   quan::three_d::quat<double> 
+   quat_from_ZYXeuler(pose_t const & pose)
+   {
+      using v3d = quan::three_d::vect<double>;
+
+      v3d const v = 0.5 * pose;
+      v3d const s{ sin(v.x),sin(v.y),sin(v.z)};
+      v3d const c{ cos(v.x),cos(v.y),cos(v.z)};
+
+      double const cXcZ = c.x * c.z;
+      double const cXsZ = c.x * s.z;
+      double const sXsZ = s.x * s.z;
+      double const sXcZ = s.x * c.x;
+
+      return { 
+         cXcZ * c.y + sXsZ * s.y,
+         sXcZ * c.y - cXsZ * s.y,
+         cXcZ * s.y + sXsZ * c.y,
+         cXsZ * c.y - sXcZ * s.y
+      };
+   }
+
+/*
+  from simgear https://github.com/FlightGear/simgear/math/SGQuat.hxx
+  Copyright (C) 2006-2009  Mathias Froehlich - Mathias.Froehlich@web.de
+  /// write the euler angles into the references
+  void getEulerRad(T& zRad, T& yRad, T& xRad) const
+  {
+    T sqrQW = w()*w();
+    T sqrQX = x()*x();
+    T sqrQY = y()*y();
+    T sqrQZ = z()*z();
+
+    T num = 2*(y()*z() + w()*x());
+    T den = sqrQW - sqrQX - sqrQY + sqrQZ;
+    if (fabs(den) <= SGLimits<T>::min() &&
+        fabs(num) <= SGLimits<T>::min())
+      xRad = 0;
+    else
+      xRad = atan2(num, den);
+
+    T tmp = 2*(x()*z() - w()*y());
+    if (tmp <= -1)
+      yRad = T(0.5)*SGMisc<T>::pi();
+    else if (1 <= tmp)
+      yRad = -T(0.5)*SGMisc<T>::pi();
+    else
+      yRad = -asin(tmp);
+
+    num = 2*(x()*y() + w()*z());
+    den = sqrQW + sqrQX - sqrQY - sqrQZ;
+    if (fabs(den) <= SGLimits<T>::min() &&
+        fabs(num) <= SGLimits<T>::min())
+      zRad = 0;
+    else {
+      T psi = atan2(num, den);
+      if (psi < 0)
+        psi += 2*SGMisc<T>::pi();
+      zRad = psi;
+    }
+  }
+
+*/
+   quan::three_d::vect<double> 
+   quat_to_ZYXeuler(quan::three_d::quat<double> const & q)
+   {
+      quan::three_d::quat<double> q2 {q.w*q.w,q.x*q.x,q.y * q.y, q.z * q.z};
+
+      double constexpr lim = std::numeric_limits<double>::min();
+      pose_t result;
+      {
+         double const numx = 2.0 * ( q.y * q.z + q.w * q.x);
+         double const denx = q2.w - q2.x - q2.y + q2.z;
+         if ( (quan::abs(denx) <= lim) && (quan::abs(numx) <= lim) ){
+           result.x = 0.0;
+         }else{
+           result.x = atan2(numx,denx);
+         }
+      }
+      {
+         double const tmp = 2.0 * (q.x * q.z - q.w * q.y);
+         if ( tmp <= -1.0 ){
+            result.y = quan::constant::pi/2.0;
+         }else {
+            if ( tmp >= 1.0 ){
+               result.y = -quan::constant::pi/2.0;
+            }else{
+               result.y = -asin(tmp);
+            }
+         }
+      }
+      {
+         double const numz = 2.0 * (q.x * q.y + q.w * q.z);
+         double const denz = q2.w + q2.x - q2.y - q2.z;
+         if( (quan::abs(denz) <= lim) && (quan::abs(numz) <= lim) ){
+            result.z = 0;
+         }else{
+            double psi = atan2(numz, denz);
+            if (psi < 0){
+               psi += 2.0*quan::constant::pi;
+            }
+            result.z = psi;
+         }
+      }
+      return result;
+   }
+
+   void update_model_frame( pose_t & pose)
+   {
+      /**
+      * @brief qpos - pos as a quaternion
+      **/
+      auto const qpose = quat_from_ZYXeuler(pose);
+
+      /**
+      * @brief turn - vector of angular change in x y z
+      */
+      auto const turn = turn_rate * update_period;
+      auto const magturn = magnitude(turn);
+      if ( magturn > 0.01_rad){
+         auto const qturn = quatFrom(unit_vector(turn),magturn);
+         //   auto qpose1 = hamilton_product(qpose,conjugate(qturn));
+         auto qpose1 = hamilton_product(qpose,qturn);
+         pose = quat_to_ZYXeuler(qpose1);
+         for ( int32_t i = 0; i < 3; ++i){
+         // pose[i] = modulo(pose[i]);
+            while ( pose[i] < 0.0_deg){
+               pose[i] += 360.0_deg;
+            }
+            while ( pose[i] >= 360.0_deg){
+               pose[i] -= 360.0_deg;
+            }
+            }
+      }
+      auto result = pose;//;
+
+      fprintf(stdout,"\rroll = %3f pitch = %3f yaw = %3f"
+         ,result[0].numeric_value()
+         ,result[1].numeric_value()
+         ,result[2].numeric_value()
+      );
+      fflush(stdout);
+              
+   }
 
    void usleep(quan::time::us const & t)
    {
