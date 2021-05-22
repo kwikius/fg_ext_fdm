@@ -321,6 +321,31 @@ namespace {
     q.z() = Cxd2Szd2*Cyd2 - Sxd2Czd2*Syd2;
     return q;
   }
+
+crrcsim quaternion.cpp
+
+  double sphi   = sin(0.5*eulerAngle.r[0]);  //s.x
+  double cphi   = cos(0.5*eulerAngle.r[0]);  //c.x
+  double stheta = sin(0.5*eulerAngle.r[1]);  //s.y
+  double ctheta = cos(0.5*eulerAngle.r[1]);  //c.y
+  double spsi   = sin(0.5*eulerAngle.r[2]);  //s.z
+  double cpsi   = cos(0.5*eulerAngle.r[2]);  //c.z
+
+  e0.init(+cpsi*ctheta*cphi +spsi*stheta*sphi, 0);
+      e0.init(c.z * c.y * c.x + s.x * s.y * s.z )
+         cx * cz * c.y + s.x * s.z * s.y
+
+  e1.init(+cpsi*ctheta*sphi -spsi*stheta*cphi, 0);
+      e1.init(c.z * c.y * s.x - s.z * s.y * c.x)
+         s.x * c.z * c.y - c.x * s.z * s.y  
+
+  e2.init(+cpsi*stheta*cphi +spsi*ctheta*sphi, 0);
+      e2.init(c.z * s.y * c.x + s.z * c.y * s.x)
+          c.x * c.z * s.y + s.x * s.z * c.y
+  
+  e3.init(-cpsi*stheta*sphi +spsi*ctheta*cphi, 0);
+     e3.init(-c.z*s.y *s.x + s.z * c.y * c.x);
+         c.x * s.z * c.y - s.x * c.z * s.y
 */
 
    quan::three_d::quat<double> 
@@ -385,6 +410,36 @@ namespace {
     }
   }
 
+crrcsim
+  void CRRCMath::Quaternion_003::updateEuler()
+{
+  double Phi, Theta, Psi;
+
+  Theta = asin( -1*mat.v[0][2] );
+
+  if( mat.v[0][0] == 0 )
+    Psi = 0;
+  else
+    Psi = atan2( mat.v[0][1], mat.v[0][0] );
+
+  if( mat.v[2][2] == 0 )
+    Phi = 0;
+  else
+    Phi = atan2( mat.v[1][2], mat.v[2][2] );
+
+  // Resolve Psi to 0 - 359.9999 
+  if (Psi < 0 )      Psi += 2*M_PI;
+  if (Psi >= 2*M_PI) Psi -= 2*M_PI;
+  
+  // Resolve Phi to 0 - 359.9999 
+  if (Phi < 0 )      Phi += 2*M_PI;
+  if (Phi >= 2*M_PI) Phi -= 2*M_PI;  
+    
+  euler.r[0] = Phi;
+  euler.r[1] = Theta;
+  euler.r[2] = Psi;
+}
+
 */
    quan::three_d::vect<double> 
    quat_to_ZYXeuler(quan::three_d::quat<double> const & q)
@@ -430,34 +485,17 @@ namespace {
       return result;
    }
 
+   quan::three_d::quat<double> qpose{1.0,0.0,0.0,0.0};
    void update_model_frame( pose_t & pose)
    {
-      /**
-      * @brief qpos - pos as a quaternion
-      **/
-      auto const qpose = quat_from_ZYXeuler(pose);
-
-      /**
-      * @brief turn - vector of angular change in x y z
-      */
       auto const turn = turn_rate * update_period;
       auto const magturn = magnitude(turn);
-      if ( magturn > 0.01_rad){
+      if ( magturn > 0.001_rad){
          auto const qturn = quatFrom(unit_vector(turn),magturn);
-         //   auto qpose1 = hamilton_product(qpose,conjugate(qturn));
-         auto qpose1 = hamilton_product(qpose,qturn);
-         pose = quat_to_ZYXeuler(qpose1);
-         for ( int32_t i = 0; i < 3; ++i){
-         // pose[i] = modulo(pose[i]);
-            while ( pose[i] < 0.0_deg){
-               pose[i] += 360.0_deg;
-            }
-            while ( pose[i] >= 360.0_deg){
-               pose[i] -= 360.0_deg;
-            }
-            }
+         qpose = unit_quat(hamilton_product(qpose,conjugate(qturn)));
+         pose = quat_to_ZYXeuler(qpose);
       }
-      auto result = pose;//;
+      auto result = pose;
 
       fprintf(stdout,"\rroll = %3f pitch = %3f yaw = %3f"
          ,result[0].numeric_value()
