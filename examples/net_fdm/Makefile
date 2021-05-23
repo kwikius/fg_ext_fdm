@@ -13,13 +13,14 @@ endif
 
 BUILD_DIR = build
 BIN_DIR = bin
-SRC_DIR = src
+SRC_DIR = ../../src
 CXX = g++-7
 CXXFLAGS = -fmax-errors=1 -std=c++14 -I$(QUAN_ROOT) -I$(SRC_DIR)/include
 CXXLIBS = -lpthread
 
 .PHONY : all test clean
-all :  $(BIN_DIR)/main.exe 
+
+all :  $(BIN_DIR)/net_fdm.exe 
 
 $(BIN_DIR)/%.exe : $(BUILD_DIR)/%.o
 	@mkdir -p $(BIN_DIR)
@@ -28,7 +29,7 @@ $(BIN_DIR)/%.exe : $(BUILD_DIR)/%.o
 	# executable in ./$@
 	@echo ....... OK ............
 
-$(BUILD_DIR)/%.o : $(SRC_DIR)/%.cpp 
+$(BUILD_DIR)/%.o : %.cpp 
 	@mkdir -p $(BUILD_DIR)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
