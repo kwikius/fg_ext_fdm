@@ -143,10 +143,16 @@ namespace {
    void update(FGNetFDM & fdm, pose_t const & pose); 
    void usleep(quan::time::us const & t);
    void run();
+
+   int process_args(int argc, char ** argv);
 }
 
 int main(int argc, char ** argv)
 {
+   if (process_args(argc, argv) != 0){
+      return 1;
+   }
+  
    if ( setup_socket()){
       run();
    }
@@ -154,6 +160,50 @@ int main(int argc, char ** argv)
 }
 
 namespace {
+
+   bool use_model_frame = true;
+
+   /**
+    * @brief process command line arguments
+   **/
+   int process_args(int argc, char ** argv)
+   {
+      for(;;){
+         int const c = getopt(argc, argv, "r:");
+         if ( c == -1){
+            return 0;
+         }
+         switch(c){
+            case 'r':{
+               char const* arg = optarg;
+               if ( strcmp(arg,"euler") == 0){
+                  use_model_frame = false;
+               }else {
+                  if (strcmp(arg,"quat") == 0){
+                     use_model_frame = true;
+                  }else{
+                     fprintf(stderr,"Unknown rotation type for -r \"%s\", options are \"euler\" or \"quat\"\n",arg);
+                     return -1;
+                  }
+               }
+            }
+            break;
+            case '?':{
+               if (optopt == 'r'){
+                  fprintf (stderr, "Option -r requires an argument.\n");
+               } else {
+                  if (isprint (optopt)){
+                     fprintf (stderr, "Unknown option `-%c'.\n", optopt);
+                  } else{
+                     fprintf (stderr,"Unknown option character `\\x%x'.\n",optopt);
+                  }
+               }   
+            }// fall through
+            default:
+            return -1;
+         }
+      }
+   }
 
    /**
     * @brief socket IP and port where FG is listening
@@ -212,7 +262,7 @@ namespace {
     * @brief use model frame or worldframe for joystick 
     * @todo make cmd line param
    **/
-   bool use_model_frame = true;
+   
 
    void update(pose_t & result,quan::joystick const & js)
    {
@@ -302,15 +352,6 @@ namespace {
       normalise_pose(pose);
       print_pose(pose);
    }
-   /**
-    *   @brief update fdm structuer with current pose
-    **/
-   void update(FGNetFDM & fdm, pose_t const & pose )  
-   {
-      fdm.phi = htonf(static_cast<float>(pose.x.numeric_value())) ;
-      fdm.theta = htonf(static_cast<float>(pose.y.numeric_value()) );
-      fdm.psi = htonf(static_cast<float>(pose.z.numeric_value()));
-   };
 
    /**
     * @brief quaternion holding current pose. ( only reqd if using model_frame)
@@ -332,6 +373,16 @@ namespace {
       }
       print_pose(pose);  
    }
+
+   /**
+    *   @brief update fdm structuer with current pose
+    **/
+   void update(FGNetFDM & fdm, pose_t const & pose )  
+   {
+      fdm.phi = htonf(static_cast<float>(pose.x.numeric_value())) ;
+      fdm.theta = htonf(static_cast<float>(pose.y.numeric_value()) );
+      fdm.psi = htonf(static_cast<float>(pose.z.numeric_value()));
+   };
 
    /**
     * wrap usleep with quan::time type
