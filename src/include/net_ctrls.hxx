@@ -12,7 +12,7 @@
 #ifndef _NET_CTRLS_HXX
 #define _NET_CTRLS_HXX
 
-#include <simgear/misc/stdint.hxx>
+#include <cstdint>
 
 // NOTE: this file defines an external interface structure.  Due to
 // variability between platforms and architectures, we only used fixed

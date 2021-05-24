@@ -21,6 +21,7 @@
 #include <quan/pressure.hpp>
 #include <quan/reciprocal_time.hpp>
 #include <quan/acceleration.hpp>
+#include <quan/temperature.hpp>
 #include <quan/angle.hpp>
 
 
@@ -78,6 +79,9 @@ public:
    template <typename T = float>
    using gal_per_hr = typename quan::volume_flow_<T>::gal_per_hr;
 
+   template <typename T>
+   using deg_F = typename quan::temperature_<T>::F;
+
    /**
       @todo temperature::F
    **/
@@ -134,11 +138,11 @@ public:
     quan::network_variable<rev_per_min<> > rpm[max_engines];	// Engine RPM rev/min
     quan::network_variable<gal_per_hr<float> > fuel_flow[max_engines];      // Fuel flow gallons/hr
     quan::network_variable<quan::pressure_<float>::psi> fuel_px[max_engines];        // Fuel pressure psi
-    quan::network_variable<float> egt[max_engines];	         // Exhaust gas temp deg F
-    quan::network_variable<float> cht[max_engines];	         // Cylinder head temp deg F
+    quan::network_variable<deg_F<float> > egt[max_engines];	         // Exhaust gas temp deg F
+    quan::network_variable<deg_F<float> > cht[max_engines];	         // Cylinder head temp deg F
     quan::network_variable<quan::pressure_<float>::psi> mp_osi[max_engines];         // Manifold pressure
-    quan::network_variable<float> tit[max_engines];	         // Turbine Inlet Temperature
-    quan::network_variable<float> oil_temp[max_engines];       // Oil temp deg F
+    quan::network_variable<deg_F<float> > tit[max_engines];	         // Turbine Inlet Temperature
+    quan::network_variable<deg_F<float> > oil_temp[max_engines];       // Oil temp deg F
     quan::network_variable<quan::pressure_<float>::psi> oil_px[max_engines];         // Oil pressure psi
 
     // Consumables

@@ -228,7 +228,7 @@ namespace {
    }
 
    /**
-    * @brief socket IP and port where FG is listening
+    * @brief socket IP and port where FlightGear is listening
     **/
    int fdmSendSocket = -1;
    struct sockaddr_in fdmSendAddr;
