@@ -7,7 +7,7 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include <net_fdm.hxx>
+#include <autoconv_net_fdm.hpp>
 #include <arpa/inet.h>
 #include <byte_order.hpp>
 
@@ -40,16 +40,19 @@
 */
 
 /**
- * @brief Control Flighgear externally . Plane is suspended in space
+ * @brief Control Flightgear externally . Plane is suspended in space
  * Use the joystick to pose the model in roll , pitch and yaw
 **/
 
 namespace {
 
+   static_assert( sizeof(autoconv_FGNetFDM) == sizeof(FGNetFDM) ,"");
+
    QUAN_QUANTITY_LITERAL(time,us);
    QUAN_QUANTITY_LITERAL(angle,deg);
    QUAN_QUANTITY_LITERAL(angle,rad);
-   QUAN_QUANTITY_LITERAL(length,m);   
+   QUAN_QUANTITY_LITERAL(length,m); 
+   QUAN_QUANTITY_LITERAL(volume,gal);    
 
    using rad_per_s = quan::reciprocal_time_<
       quan::angle::rad 
@@ -65,8 +68,17 @@ namespace {
       return deg_per_s{quan::angle::deg{v}};
    }
 
+   constexpr inline 
+   rad_per_s operator "" _rad_per_s ( long double v)
+   {
+      return deg_per_s{quan::angle::rad{v}};
+   }
+
    using pose_t = quan::three_d::vect<quan::angle::rad>; 
+
    using turn_rate_t = quan::three_d::vect<rad_per_s>; 
+
+   using stick_percent_t = quan::three_d::vect<double>;
 
    /**
     * @brief simulation frame period
@@ -88,6 +100,16 @@ namespace {
     **/
    pose_t pose;  
 
+   /**
+    *  @brief current model joystick percent of full range
+    *    between +1 .. -1. Only for pitch roll and yaw
+    *  
+    *  @param x = roll 
+    *  @param y = pitch 
+    *  @param z = yaw
+    **/
+   stick_percent_t stick_percent;
+   
    /**
     *  @brief current model turn rate in World Frame
     *  updated from joystick.
@@ -136,11 +158,11 @@ namespace {
         -1   // yaw
     };
 
-   bool setup_socket();
+   bool setup_fdm_out_socket();
    void update_turnrate(quan::joystick const & js);
    void update_world_frame(pose_t & result);
    void update_model_frame(pose_t & result);
-   void update(FGNetFDM & fdm, pose_t const & pose); 
+   void update(autoconv_FGNetFDM & fdm, pose_t const & pose); 
    void usleep(quan::time::us const & t);
    void run();
 
@@ -153,7 +175,7 @@ int main(int argc, char ** argv)
       return 1;
    }
   
-   if ( setup_socket()){
+   if ( setup_fdm_out_socket()){
       run();
    }
    return 0;
@@ -208,24 +230,24 @@ namespace {
    /**
     * @brief socket IP and port where FG is listening
     **/
-   int sendSocket = -1;
-   struct sockaddr_in sendAddr;
-   constexpr char  fg_ip[] = "127.0.0.1";
-   int constexpr fg_port = 5500;
+   int fdmSendSocket = -1;
+   struct sockaddr_in fdmSendAddr;
+   constexpr char localhost[] = "127.0.0.1";
+   int constexpr fdmSendPort = 5500;
 
-   bool setup_socket()
+   bool setup_fdm_out_socket()
    {
-      memset(&sendAddr,0,sizeof(sendAddr));
-      sendAddr.sin_family = AF_INET;
-      sendAddr.sin_port = htons(fg_port);
+      memset(&fdmSendAddr,0,sizeof(fdmSendAddr));
+      fdmSendAddr.sin_family = AF_INET;
+      fdmSendAddr.sin_port = htons(fdmSendPort);
 
-      if ( inet_pton(AF_INET, fg_ip, &sendAddr.sin_addr) != 1){
+      if ( inet_pton(AF_INET, localhost, &fdmSendAddr.sin_addr) != 1){
          fprintf(stderr,"convert ip address failed\n");
          exit(-1);
       }
 
-      sendSocket = socket(AF_INET,SOCK_DGRAM,0);
-      if (sendSocket  >= 0){
+      fdmSendSocket = socket(AF_INET,SOCK_DGRAM,0);
+      if (fdmSendSocket  >= 0){
          return true;
       }else {
          perror("socket() failed");
@@ -234,36 +256,29 @@ namespace {
       }
    }
 
-   void setup(FGNetFDM & fdm)
+   void setup(autoconv_FGNetFDM & fdm)
    {
-      memset(&fdm,0,sizeof(fdm));
-
-      fdm.version = htonl(FG_NET_FDM_VERSION);
-
-      quan::angle::rad constexpr latitude = 50.7381_deg;
-      quan::angle::rad constexpr longitude = 0.2494_deg;
-
-      auto constexpr altitude = 250.0_m; // above sea level
-      auto constexpr visibility = 150.0_m;
-
-      fdm.latitude = htond(latitude.numeric_value());
-      fdm.longitude = htond(longitude.numeric_value());
-      fdm.altitude = htond(altitude.numeric_value());
-      fdm.num_engines = htonl(1);
-      fdm.num_tanks = htonl(1);
-      fdm.fuel_quantity[0] = htonf(100.0);
-      fdm.num_wheels = htonl(3);
-      fdm.cur_time = htonl(time(0));
-      fdm.warp = htonl(1);
-      fdm.visibility = htonf(visibility.numeric_value());
+    /** ##############################################
+     * N.B the host to network conversion is automatic
+     * no need to use hton#(v)
+     * ###############################################
+    **/
+      fdm.latitude =           50.7381_deg;
+      fdm.longitude =           0.2494_deg;
+      fdm.altitude =          250.0_m;  //a.s.l
+      fdm.num_engines =         1;
+      fdm.num_tanks =           1;
+      fdm.fuel_quantity[0] =  100.0_gal;
+      fdm.num_wheels =          3;
+      fdm.cur_time =       time(0);
+      fdm.warp =                1;
+      fdm.visibility =       1500.0_m;
    }
 
    /**
     * @brief use model frame or worldframe for joystick 
     * @todo make cmd line param
    **/
-   
-
    void update(pose_t & result,quan::joystick const & js)
    {
      update_turnrate(js);
@@ -278,7 +293,7 @@ namespace {
    void run()
    {
       pose_t pose;
-      FGNetFDM fdm;
+      autoconv_FGNetFDM fdm;
       setup(fdm);
       quan::joystick js{"/dev/input/js0"};
 
@@ -286,13 +301,12 @@ namespace {
          usleep(update_period);
          update(pose,js);
          update(fdm,pose);
-         sendto(sendSocket,(void *)&fdm,sizeof(fdm),0,(struct sockaddr *)&sendAddr,sizeof(sendAddr));
+         sendto(fdmSendSocket,(void *)&fdm,sizeof(fdm),0,(struct sockaddr *)&fdmSendAddr,sizeof(fdmSendAddr));
       }
     }
 
-    void update_turnrate(quan::joystick const & js)
+    void update_stick_percent(quan::joystick const & js)
     {
-
      /**
       * @brief function to turn raw joystick number into a representation 
       * of the joystick axis in range  -1 to 1  ...
@@ -303,17 +317,22 @@ namespace {
      /**
       * @brief ... so work out stick percent
       **/
-      quan::three_d::vect<double> const stick_percent = {
+      stick_percent = {
          get_js_percent(roll_idx), 
          get_js_percent(pitch_idx),
          get_js_percent(yaw_idx)
       };
-      
+    }
+
+   void update_turnrate(quan::joystick const & js)
+   {
+      update_stick_percent(js);
+
       /// @brief calc turn rates vector per element
       for ( int32_t i = 0; i < 3; ++i){
          turn_rate[i] = max_turn_rate[i] * stick_percent[i] ;
       }
-    }
+   }
 
      /**
       * @brief modulo pose vector to 0..360 degrees
@@ -354,7 +373,7 @@ namespace {
    }
 
    /**
-    * @brief quaternion holding current pose. ( only reqd if using model_frame)
+    * @brief quaternion holding current pose. ( only used if using model_frame)
    **/
    quan::three_d::quat<double> qpose{1.0,0.0,0.0,0.0};
 
@@ -377,11 +396,16 @@ namespace {
    /**
     *   @brief update fdm structuer with current pose
     **/
-   void update(FGNetFDM & fdm, pose_t const & pose )  
+   void update(autoconv_FGNetFDM & fdm, pose_t const & pose )  
    {
-      fdm.phi = htonf(static_cast<float>(pose.x.numeric_value())) ;
-      fdm.theta = htonf(static_cast<float>(pose.y.numeric_value()) );
-      fdm.psi = htonf(static_cast<float>(pose.z.numeric_value()));
+    /** ##############################################
+     * N.B the host to network conversion is automatic
+     * no need to use hton#(v)
+     * ###############################################
+    **/
+      fdm.phi = pose.x;
+      fdm.theta = pose.y;
+      fdm.psi = pose.z;
    };
 
    /**
