@@ -13,8 +13,13 @@
 #define AUTOCONV_NET_CTRLS_HXX
 
 #include <net_ctrls.hxx>
-
+#include <quan/length.hpp>
+#include <quan/velocity.hpp>
+#include <quan/angle.hpp>
+#include <quan/temperature.hpp>
+#include <quan/pressure.hpp>
 #include <quan/network_variable.hpp>
+
 
 // NOTE: this file defines an external interface structure.  Due to
 // variability between platforms and architectures, we only used fixed
@@ -55,6 +60,9 @@ public:
     static constexpr uint32_t max_engines = FGNetCtrls::FG_MAX_ENGINES;
     static constexpr uint32_t max_wheels = FGNetCtrls::FG_MAX_WHEELS;
     static constexpr uint32_t max_tanks = FGNetCtrls::FG_MAX_TANKS;
+
+    // distinguish booleans
+    using  bool32 = uint32_t;
 private:
     quan::network_variable<uint32_t> version;		         // increment when data values change
 public:
@@ -70,39 +78,39 @@ public:
     quan::network_variable<double> speedbrake;
 
     // Aero control faults
-    quan::network_variable<uint32_t> flaps_power;                 // true = power available
-    quan::network_variable<uint32_t> flap_motor_ok;
+    quan::network_variable<bool32> flaps_power;                 // true = flaps serviceable
+    quan::network_variable<bool32> flap_motor_ok;               // true = motor ok
 
     // Engine controls
     quan::network_variable<uint32_t> num_engines;		 // number of valid engines
-    quan::network_variable<uint32_t> master_bat[FG_MAX_ENGINES];
-    quan::network_variable<uint32_t> master_alt[FG_MAX_ENGINES];
+    quan::network_variable<bool32> master_bat[FG_MAX_ENGINES];
+    quan::network_variable<bool32> master_alt[FG_MAX_ENGINES];
     quan::network_variable<uint32_t> magnetos[FG_MAX_ENGINES];
-    quan::network_variable<uint32_t> starter_power[FG_MAX_ENGINES];// true = starter power
+    quan::network_variable<bool32> starter_power[FG_MAX_ENGINES];// true = starter power
     quan::network_variable<double> throttle[FG_MAX_ENGINES];     //  0 ... 1
     quan::network_variable<double> mixture[FG_MAX_ENGINES];      //  0 ... 1
     quan::network_variable<double> condition[FG_MAX_ENGINES];    //  0 ... 1
-    quan::network_variable<uint32_t> fuel_pump_power[FG_MAX_ENGINES];// true = on
+    quan::network_variable<bool32> fuel_pump_power[FG_MAX_ENGINES];// true = on
     quan::network_variable<double> prop_advance[FG_MAX_ENGINES]; //  0 ... 1
     quan::network_variable<uint32_t> feed_tank_to[4];
     quan::network_variable<uint32_t> reverse[4];
 
 
     // Engine faults
-    quan::network_variable<uint32_t> engine_ok[FG_MAX_ENGINES];
-    quan::network_variable<uint32_t> mag_left_ok[FG_MAX_ENGINES];
-    quan::network_variable<uint32_t> mag_right_ok[FG_MAX_ENGINES];
-    quan::network_variable<uint32_t> spark_plugs_ok[FG_MAX_ENGINES];  // false = fouled plugs
+    quan::network_variable<bool32> engine_ok[FG_MAX_ENGINES];
+    quan::network_variable<bool32> mag_left_ok[FG_MAX_ENGINES];
+    quan::network_variable<bool32> mag_right_ok[FG_MAX_ENGINES];
+    quan::network_variable<bool32> spark_plugs_ok[FG_MAX_ENGINES];  // false = fouled plugs
     quan::network_variable<uint32_t> oil_press_status[FG_MAX_ENGINES];// 0 = normal, 1 = low, 2 = full fail
-    quan::network_variable<uint32_t> fuel_pump_ok[FG_MAX_ENGINES];
+    quan::network_variable<bool32> fuel_pump_ok[FG_MAX_ENGINES];
 
     // Fuel management
     quan::network_variable<uint32_t> num_tanks;                      // number of valid tanks
-    quan::network_variable<uint32_t> fuel_selector[FG_MAX_TANKS];    // false = off, true = on
+    quan::network_variable<bool32> fuel_selector[FG_MAX_TANKS];    // false = off, true = on
     quan::network_variable<uint32_t> xfer_pump[5];                   // specifies transfer from array
                                              // value tank to tank specified by
                                              // int value
-    quan::network_variable<uint32_t> cross_feed;                     // false = off, true = on
+    quan::network_variable<bool32> cross_feed;                     // false = off, true = on
 
     // Brake controls
     quan::network_variable<double> brake_left;
@@ -112,7 +120,7 @@ public:
     quan::network_variable<double> brake_parking;
     
     // Landing Gear
-    quan::network_variable<uint32_t> gear_handle; // true=gear handle down; false= gear handle up
+    quan::network_variable<bool32> gear_handle; // true=gear handle down; false= gear handle up
 
     // Switches
     quan::network_variable<uint32_t> master_avionics;
@@ -124,17 +132,17 @@ public:
     quan::network_variable<double>	nav_2;
 
     // wind and turbulance
-    quan::network_variable<double> wind_speed_kt;
-    quan::network_variable<double> wind_dir_deg;
+    quan::network_variable<quan::velocity_<double>::knot> wind_speed_kt;
+    quan::network_variable<quan::angle_<double>::deg> wind_dir_deg;
     quan::network_variable<double> turbulence_norm;
 
     // temp and pressure
-    quan::network_variable<double> temp_c;
-    quan::network_variable<double> press_inhg;
+    quan::network_variable<quan::temperature_<double>::C > temp_c;
+    quan::network_variable<quan__pressure_<double>::inHg> press_inhg;
 
     // other information about environment
-    quan::network_variable<double> hground;		         // ground elevation (meters)
-    quan::network_variable<double> magvar;		         // local magnetic variation in degs.
+    quan::network_variable<quan::length_<double::m> hground;		         // ground elevation (meters)
+    quan::network_variable<quan::angle_<double>::deg> magvar;		         // local magnetic variation in degs.
 
     // hazards
     quan::network_variable<uint32_t> icing;                      // icing status could me much

@@ -18,8 +18,10 @@
 *  @brief Try sending in control structure to FlightGear. Unfortunately doesnt work.
 *  It appears you have to also send in net_fdm structure.
 *  or read modify write the control structure
-*  Anyway causes exceptions in FG with nans for gps_pos and alt on cmd line
-*@todo try read modify write
+*  Anyway causes exceptions in FG with nans for gps_pos and alt on cmd line.
+*
+*  Update . Cant get reading ctrl structure to work ATM due to not being able to read socket
+*  so gave up and commented out recv atm and looking at telnet interface
 **/
 
 namespace{
@@ -33,7 +35,8 @@ namespace{
    bool setup_recv_socket();
    bool setup_sockets()
    {
-      return setup_send_socket() && setup_recv_socket();
+     // return setup_send_socket() && setup_recv_socket();
+     return setup_send_socket();
    }
 
    void run();
@@ -141,6 +144,9 @@ namespace {
             return 1;
          case 0:
             return 0;
+         case -1:
+            perror("read socket");
+            exit(1);
          default:
             fprintf(stderr,"invalid no of bytes(%d) from socket\n",static_cast<int>(nbytes_read));
             return -1;
@@ -202,9 +208,21 @@ namespace {
    void setup(autoconv_FGNetCtrls & fc)
    {
       fc.num_engines = 1;
+      fc.starter_power[0] = 1;
+      fc.fuel_pump_power[0] = 1;
+      fc.master_bat[0] = 1;
+      fc.master_alt[0] = 1;
+      fc.mixture[0] = 0.5;
       fc.speedup = 1;
-      
+      fc.flaps_power = 1;
       fc.engine_ok[0] = 1;
+      fc.condition[0] = 1.0;
+      fc.mag_left_ok[0] = 1;
+      fc.mag_right_ok[0] = 1;
+      fc.spark_plugs_ok[0] = 1;
+      fc.fuel_pump_ok[0] = 1;
+      fc.num_tanks = 1;
+      fc.fuel_selector[0] = 1;
    }
 
    void run()
@@ -217,7 +235,7 @@ namespace {
 
          for(;;){
             if (key_was_pressed()){
-               close(recvSocket);
+             //  close(recvSocket);
                close(sendSocket);
                //@todo close(js);
                fprintf(stderr, "exiting on keypress\n");
@@ -226,6 +244,7 @@ namespace {
             }
 
             quan::time::us update_time_left = update_period;
+/*
             while ( read_socket(fc) <= 0){
                usleep(1000.0_us);
                update_time_left -= 1000.0_us;
@@ -235,13 +254,14 @@ namespace {
                //exit(1);
                }
             }
+*/
             get_joystick(js,fc);
             write_socket(fc);
             usleep(update_period);
          }
 
       }catch(std::runtime_error & e){
-         close(recvSocket);
+       //  close(recvSocket);
          close(sendSocket);
          fprintf(stderr,"Exception : %s\n",e.what());
          exit(1);
