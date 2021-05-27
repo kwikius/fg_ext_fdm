@@ -18,7 +18,6 @@
 *  @brief Try sending in control structure to FlightGear. Unfortunately doesnt work.
 *  It appears you have to also send in net_fdm structure.
 *  or read modify write the control structure
-*  Anyway causes exceptions in FG with nans for gps_pos and alt on cmd line.
 *
 *  Update . Cant get reading ctrl structure to work ATM due to not being able to read socket
 *  so gave up and commented out recv atm and looking at telnet interface

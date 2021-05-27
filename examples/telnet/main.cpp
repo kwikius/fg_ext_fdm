@@ -9,6 +9,11 @@
 #include <quan/joystick.hpp>
 #include <quan/utility/timer.hpp>
 
+/*
+ Control FlightGear using telnet to write properties from joystick
+ derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
+*/
+
 namespace {
 
    QUAN_QUANTITY_LITERAL(time,us);
@@ -76,17 +81,6 @@ namespace {
       set_float(f,"/controls/flight/rudder",get_js_percent(yaw_idx));
       set_float(f,"/controls/engines/engine[0]/throttle", get_js_percent(throttle_idx) + 0.5);
    }
-
-   /*
-      get
-      Compass vector     attitude 
-      GPS vector
-      accelerometer vector
-      gyro vector
-      barometer
-      airspeed
-      windspeed vector
-   */
 }
 
 
