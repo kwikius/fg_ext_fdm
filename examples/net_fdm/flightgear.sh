@@ -4,8 +4,8 @@ fgfs \
 --aircraft=Dragonfly \
 --prop:/input/joysticks/js[0]=0 \
 --disable-random-objects \
---fg-root=/usr/share/games/flightgear \
---fg-scenery=/usr/share/games/flightgear/Scenery \
+--fg-root=/usr/share/games/flightgear/ \
+--fg-scenery=/usr/share/games/flightgear/Scenery/ \
 --enable-terrasync \
 --units-meters \
 --altitude=250 \
