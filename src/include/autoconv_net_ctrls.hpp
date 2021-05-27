@@ -138,10 +138,10 @@ public:
 
     // temp and pressure
     quan::network_variable<quan::temperature_<double>::C > temp_c;
-    quan::network_variable<quan__pressure_<double>::inHg> press_inhg;
+    quan::network_variable<quan::pressure_<double>::inHg> press_inhg;
 
     // other information about environment
-    quan::network_variable<quan::length_<double::m> hground;		         // ground elevation (meters)
+    quan::network_variable<quan::length_<double>::m> hground;		         // ground elevation (meters)
     quan::network_variable<quan::angle_<double>::deg> magvar;		         // local magnetic variation in degs.
 
     // hazards
