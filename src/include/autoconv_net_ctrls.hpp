@@ -51,11 +51,6 @@ class autoconv_FGNetCtrls {
 public:
 
     autoconv_FGNetCtrls(): version{FG_NET_CTRLS_VERSION}{}
-    enum {
-        FG_MAX_ENGINES = 4,
-        FG_MAX_WHEELS = 16,
-        FG_MAX_TANKS = 8
-    };
 
     static constexpr uint32_t max_engines = FGNetCtrls::FG_MAX_ENGINES;
     static constexpr uint32_t max_wheels = FGNetCtrls::FG_MAX_WHEELS;
@@ -83,30 +78,30 @@ public:
 
     // Engine controls
     quan::network_variable<uint32_t> num_engines;		 // number of valid engines
-    quan::network_variable<bool32> master_bat[FG_MAX_ENGINES];
-    quan::network_variable<bool32> master_alt[FG_MAX_ENGINES];
-    quan::network_variable<uint32_t> magnetos[FG_MAX_ENGINES];
-    quan::network_variable<bool32> starter_power[FG_MAX_ENGINES];// true = starter power
-    quan::network_variable<double> throttle[FG_MAX_ENGINES];     //  0 ... 1
-    quan::network_variable<double> mixture[FG_MAX_ENGINES];      //  0 ... 1
-    quan::network_variable<double> condition[FG_MAX_ENGINES];    //  0 ... 1
-    quan::network_variable<bool32> fuel_pump_power[FG_MAX_ENGINES];// true = on
-    quan::network_variable<double> prop_advance[FG_MAX_ENGINES]; //  0 ... 1
+    quan::network_variable<bool32> master_bat[max_engines];
+    quan::network_variable<bool32> master_alt[max_engines];
+    quan::network_variable<uint32_t> magnetos[max_engines];
+    quan::network_variable<bool32> starter_power[max_engines];// true = starter power
+    quan::network_variable<double> throttle[max_engines];     //  0 ... 1
+    quan::network_variable<double> mixture[max_engines];      //  0 ... 1
+    quan::network_variable<double> condition[max_engines];    //  0 ... 1
+    quan::network_variable<bool32> fuel_pump_power[max_engines];// true = on
+    quan::network_variable<double> prop_advance[max_engines]; //  0 ... 1
     quan::network_variable<uint32_t> feed_tank_to[4];
     quan::network_variable<uint32_t> reverse[4];
 
 
     // Engine faults
-    quan::network_variable<bool32> engine_ok[FG_MAX_ENGINES];
-    quan::network_variable<bool32> mag_left_ok[FG_MAX_ENGINES];
-    quan::network_variable<bool32> mag_right_ok[FG_MAX_ENGINES];
-    quan::network_variable<bool32> spark_plugs_ok[FG_MAX_ENGINES];  // false = fouled plugs
-    quan::network_variable<uint32_t> oil_press_status[FG_MAX_ENGINES];// 0 = normal, 1 = low, 2 = full fail
-    quan::network_variable<bool32> fuel_pump_ok[FG_MAX_ENGINES];
+    quan::network_variable<bool32> engine_ok[max_engines];
+    quan::network_variable<bool32> mag_left_ok[max_engines];
+    quan::network_variable<bool32> mag_right_ok[max_engines];
+    quan::network_variable<bool32> spark_plugs_ok[max_engines];  // false = fouled plugs
+    quan::network_variable<uint32_t> oil_press_status[max_engines];// 0 = normal, 1 = low, 2 = full fail
+    quan::network_variable<bool32> fuel_pump_ok[max_engines];
 
     // Fuel management
     quan::network_variable<uint32_t> num_tanks;                      // number of valid tanks
-    quan::network_variable<bool32> fuel_selector[FG_MAX_TANKS];    // false = off, true = on
+    quan::network_variable<bool32> fuel_selector[max_tanks];    // false = off, true = on
     quan::network_variable<uint32_t> xfer_pump[5];                   // specifies transfer from array
                                              // value tank to tank specified by
                                              // int value

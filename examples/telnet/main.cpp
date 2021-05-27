@@ -74,8 +74,11 @@ namespace {
          }
     }
 
-   void set_controls(FGFSSocket<256U> & f)
+   void set_controls(FGFSSocket<256U> & f, quan::joystick & js )
    {
+      auto get_js_percent = [&js](int32_t i)->double {
+         return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
+      };
       set_float(f,"/controls/flight/aileron",get_js_percent(roll_idx));
       set_float(f,"/controls/flight/elevator",get_js_percent(pitch_idx));
       set_float(f,"/controls/flight/rudder",get_js_percent(yaw_idx));
@@ -83,8 +86,7 @@ namespace {
    }
 }
 
-
-int main(const int argc, const char *argv[])
+int main(const int argc, const char *argv[]){
 try {
 	const char *hostname = argc > 1 ? argv[1] : "localhost";
 	int port = argc > 2 ? atoi(argv[2]) : 5501;
@@ -94,14 +96,10 @@ try {
 
    quan::joystick js{"/dev/input/js0"};
 
-   auto get_js_percent = [&js](int32_t i)->double {
-      return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
-   };
-
    quan::timer<> timer;
    quan::time::us t = timer();
    for (;;){
-      set_controls(f);
+      set_controls(f,js);
       auto const dt = timer() - t;
       t = timer();
       usleep(20000_us - dt );
@@ -116,4 +114,5 @@ try {
 } catch (...) {
 	std::cerr << "Error: unknown exception" << std::endl;
 	return EXIT_FAILURE;
+}
 }
