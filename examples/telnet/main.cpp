@@ -4,7 +4,7 @@
 #include <cstdlib>
 
 #include <iostream>
-#include "fgfsclient.hpp"
+#include "fgfs_telnet.hpp"
 
 #include <quan/joystick.hpp>
 #include <quan/utility/timer.hpp>
@@ -40,41 +40,9 @@ namespace {
         -1   // yaw
     };
 
-    int set_float(FGFSSocket & f, const char* prop, double const & val)
-    {
-        return f.write("set %s %f",prop,val);
-    }
+   
 
-    bool get_float(FGFSSocket & f, const char* prop, double & val)
-    {
-         f.write("get %s",prop);
-         const char* p = f.read();
-         if (p){
-           val = atof(p);
-           return true;
-         }else{
-           return false;
-         }
-    }
-
-    int set_int32(FGFSSocket & f, const char* prop,int const & val)
-    {
-       return f.write("set %s %d",prop,val);
-    }
-
-    bool get_int(FGFSSocket & f, const char* prop, int & val)
-    {
-         f.write("get %s",prop);
-         const char* p = f.read();
-         if (p){
-           val = atoi(p);
-           return true;
-         }else{
-           return false;
-         }
-    }
-
-   void set_controls(FGFSSocket & f, quan::joystick & js )
+   void set_controls(fgfs_telnet & f, quan::joystick & js )
    {
       auto get_js_percent = [&js](int32_t i)->double {
          return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
@@ -91,7 +59,7 @@ try {
 	const char *hostname = argc > 1 ? argv[1] : "localhost";
 	int port = argc > 2 ? atoi(argv[2]) : 5501;
 
-	FGFSSocket f(hostname, port);
+	fgfs_telnet f(hostname, port);
 	f.flush();
 
    quan::joystick js{"/dev/input/js0"};
