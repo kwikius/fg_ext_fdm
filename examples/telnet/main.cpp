@@ -40,12 +40,12 @@ namespace {
         -1   // yaw
     };
 
-    int set_float(FGFSSocket<256U> & f, const char* prop, double const & val)
+    int set_float(FGFSSocket & f, const char* prop, double const & val)
     {
         return f.write("set %s %f",prop,val);
     }
 
-    bool get_float(FGFSSocket<256U> & f, const char* prop, double & val)
+    bool get_float(FGFSSocket & f, const char* prop, double & val)
     {
          f.write("get %s",prop);
          const char* p = f.read();
@@ -57,12 +57,12 @@ namespace {
          }
     }
 
-    int set_int32(FGFSSocket<256U> & f, const char* prop,int const & val)
+    int set_int32(FGFSSocket & f, const char* prop,int const & val)
     {
        return f.write("set %s %d",prop,val);
     }
 
-    bool get_int(FGFSSocket<256U> & f, const char* prop, int & val)
+    bool get_int(FGFSSocket & f, const char* prop, int & val)
     {
          f.write("get %s",prop);
          const char* p = f.read();
@@ -74,7 +74,7 @@ namespace {
          }
     }
 
-   void set_controls(FGFSSocket<256U> & f, quan::joystick & js )
+   void set_controls(FGFSSocket & f, quan::joystick & js )
    {
       auto get_js_percent = [&js](int32_t i)->double {
          return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
@@ -91,7 +91,7 @@ try {
 	const char *hostname = argc > 1 ? argv[1] : "localhost";
 	int port = argc > 2 ? atoi(argv[2]) : 5501;
 
-	FGFSSocket<256U> f(hostname, port);
+	FGFSSocket f(hostname, port);
 	f.flush();
 
    quan::joystick js{"/dev/input/js0"};

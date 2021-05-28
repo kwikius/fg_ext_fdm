@@ -31,13 +31,10 @@
 
 /*
  Control FlightGear using telnet to write properties from joystick
+ Read fdm data structure from Flightgear
+ Basic requirements for SITL
  derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
-
-Read fdm from Flightgear also
-
-  
 */
-
 namespace {
 
    QUAN_QUANTITY_LITERAL(time,us);
@@ -64,12 +61,12 @@ namespace {
         -1   // yaw
     };
 
-    int set_float(FGFSSocket<256U> & f, const char* prop, double const & val)
+    int set_float(FGFSSocket & f, const char* prop, double const & val)
     {
         return f.write("set %s %f",prop,val);
     }
 
-    bool get_float(FGFSSocket<256U> & f, const char* prop, double & val)
+    bool get_float(FGFSSocket & f, const char* prop, double & val)
     {
          f.write("get %s",prop);
          const char* p = f.read();
@@ -81,12 +78,12 @@ namespace {
          }
     }
 
-    int set_int32(FGFSSocket<256U> & f, const char* prop,int const & val)
+    int set_int32(FGFSSocket & f, const char* prop,int const & val)
     {
        return f.write("set %s %d",prop,val);
     }
 
-    bool get_int(FGFSSocket<256U> & f, const char* prop, int & val)
+    bool get_int(FGFSSocket & f, const char* prop, int & val)
     {
          f.write("get %s",prop);
          const char* p = f.read();
@@ -98,7 +95,7 @@ namespace {
          }
     }
 
-   void set_controls(FGFSSocket<256U> & f, quan::joystick & js )
+   void set_controls(FGFSSocket & f, quan::joystick & js )
    {
       auto get_js_percent = [&js](int32_t i)->double {
          return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
@@ -106,70 +103,70 @@ namespace {
       set_float(f,"/controls/flight/aileron",get_js_percent(roll_idx));
       set_float(f,"/controls/flight/elevator",get_js_percent(pitch_idx));
       set_float(f,"/controls/flight/rudder",get_js_percent(yaw_idx));
-      set_float(f,"/controls/engines/engine[0]/throttle", get_js_percent(throttle_idx) + 0.5);
+      set_float(f,"/controls/engines/engine[0]/throttle", get_js_percent(throttle_idx) + 1.0);
    }
 }
 
+struct fdm_in_socket{
 
-namespace {
-   
-   sockaddr_in address = {0};
-   /*
-     return socket id
-   */
-   
-   int setup_socket()
-   {
-      int const socket_fd = socket(AF_INET, SOCK_DGRAM, 0); 
-
-      if (socket_fd == -1){
+    fdm_in_socket(const char* ip_address, int32_t port)
+    :fdm{},m_socket_fd{::socket(AF_INET, SOCK_DGRAM, 0)}, m_address{}
+    {
+      if (m_socket_fd == -1){
          perror("open socket failed");
-         exit(errno);
+         ::exit(errno);
       }else{
-         fprintf(stdout,"socket created\n");
+         ::fprintf(stdout,"socket created\n");
       }
 
-      // ip address as a string
-      const char ip_address_str[] = "127.0.0.1";
-      static constexpr int32_t port = 5600;
-      {
-         address.sin_family = AF_INET;
-         address.sin_port = htons(port);
-         
-         if ( inet_pton(AF_INET, ip_address_str, &address.sin_addr) != 1){
-            fprintf(stderr,"convert ip address failed\n");
-            exit(-1);
-         }
+      m_address.sin_family = AF_INET;
+      m_address.sin_port = htons(port);
 
-         if (bind(socket_fd, (struct sockaddr *) &address,sizeof(address)) == -1){
-            perror("bind");
-            exit(errno);
-         }
+      if ( ::inet_pton(AF_INET, ip_address, &m_address.sin_addr) != 1){
+         ::fprintf(stderr,"convert ip address failed\n");
+         exit(-1);
       }
-      return socket_fd;
-   }
 
-   int read_fdm(int socket_fd, autoconv_FGNetFDM & fdm)
-   {
-      socklen_t address_size = sizeof(address);
+      if (bind(m_socket_fd, (struct sockaddr *) &m_address,sizeof(m_address)) == -1){
+         ::perror("bind");
+         ::exit(errno);
+      }
+    }
 
-      ssize_t nbytes_read = recvfrom(socket_fd,&fdm, sizeof(fdm),0,(struct sockaddr*)&address, &address_size );
+    ~fdm_in_socket()
+    {
+      ::close(m_socket_fd);
+    }
+
+    int read()
+    {
+      socklen_t address_size = sizeof(m_address);
+
+      ssize_t const nbytes_read = ::recvfrom(m_socket_fd,&fdm, sizeof(fdm),0,(struct sockaddr*)&m_address, &address_size );
       if( nbytes_read == sizeof(fdm) ){
           return 1;
       }else{
          if ( nbytes_read < 0){
-            perror("error in recvfrom\n");
+            ::perror("error in recvfrom\n");
             exit(errno);
          }else {
             if ( nbytes_read == 0){
-               fprintf(stderr,"recvfrom socket no bytes read\n");
+               ::fprintf(stderr,"recvfrom socket no bytes read\n");
             }else{
-               fprintf(stderr,"unknown error\n");
+               ::fprintf(stderr,"unknown error\n");
             }
          }
       }
       exit(errno);
-   }
+    }
+
+   autoconv_FGNetFDM fdm;
+private:
+   int m_socket_fd;
+   sockaddr_in m_address;
+};
+
+namespace {
 
    void output_fdm(autoconv_FGNetFDM const & fdm)
    {
@@ -196,21 +193,18 @@ int main(const int argc, const char *argv[])
 
       fprintf(stdout, "Flightgear io\n");
 
-      const char *hostname = argc > 1 ? argv[1] : "localhost";
-      int port = argc > 2 ? atoi(argv[2]) : 5501;
       fprintf(stdout, "setting up telnet\n");
-      FGFSSocket<256U> f(hostname, port);
+      FGFSSocket f("localhost", 5501);
       fprintf(stdout, "telnet setup\n");
-      f.flush();
-      socket_fd = setup_socket();
+
+      fdm_in_socket fdm_in("127.0.0.1",5600);
       quan::joystick js{"/dev/input/js0"};
-      autoconv_FGNetFDM fdm;
 
       quan::timer<> timer;
       quan::time::us t = timer();
       for (;;){
-         read_fdm(socket_fd,fdm);
-         output_fdm(fdm);
+         fdm_in.read();
+         output_fdm(fdm_in.fdm);
          set_controls(f,js);
          auto const dt = timer() - t;
          t = timer();

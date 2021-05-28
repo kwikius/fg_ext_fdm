@@ -13,26 +13,30 @@
 #include <string.h>
 #include <fgfsclient.hpp>
 
-//#include <iostream>
+/*
+ derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
+*/
 
 namespace {
    QUAN_QUANTITY_LITERAL(time,s)
 }
 
-template <unsigned int BufLen>
-FGFSSocket<BufLen>::FGFSSocket(const char *hostname, unsigned port) :
-	m_sock(-1),
-	m_connected(false),
-	m_timeout(1_s)
+FGFSSocket::FGFSSocket(const char *hostname, unsigned port,size_t buflen) :
+	m_sock{::socket(PF_INET, SOCK_STREAM, IPPROTO_TCP)},
+   m_buffer{new char [buflen]{'0'}},
+   m_buflen{buflen},
+	m_timeout{1_s},
+	m_connected{false}
 {
-	m_sock = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
-	if (m_sock < 0)
-		throw("FGFSSocket/socket");
+	if (m_sock < 0){
+      delete[] m_buffer;
+	   throw("FGFSSocket/socket");
+   }
 
-	struct hostent *hostinfo;
-	hostinfo = gethostbyname(hostname);
+	struct hostent* hostinfo = gethostbyname(hostname);
 	if (!hostinfo) {
 		close();
+      delete[] m_buffer;
 		throw("FGFSSocket/gethostbyname: unknown host");
 	}
 
@@ -43,27 +47,30 @@ FGFSSocket<BufLen>::FGFSSocket(const char *hostname, unsigned port) :
 
 	if (::connect(m_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
 		close();
+      delete[] m_buffer;
+      m_buffer = nullptr;
 		throw("FGFSSocket/connect");
 	}
 	m_connected = true;
 	try {
 		write("data");
+      flush();
 	} catch (...) {
 		close();
+      delete[] m_buffer;
+      m_buffer = nullptr;
 		throw;
 	}
 }
 
-
-template <unsigned int BufLen>
-FGFSSocket<BufLen>::~FGFSSocket()
+FGFSSocket::~FGFSSocket()
 {
    close();
+   delete[] m_buffer;
 }
 
 
-template <unsigned int BufLen>
-int FGFSSocket<BufLen>::close(void)
+int FGFSSocket::close(void)
 {
 	if (m_connected){
 		write("quit");
@@ -76,12 +83,11 @@ int FGFSSocket<BufLen>::close(void)
 	return ret;
 }
 
-template <unsigned int BufLen>
-int FGFSSocket<BufLen>::write(const char *msg, ...)
+int FGFSSocket::write(const char *msg, ...)
 {
 	va_list va;
 	ssize_t len;
-	char buf[BufLen];
+	char buf[m_buflen];
 	fd_set fd;
 	struct timeval tv;
 
@@ -93,7 +99,7 @@ int FGFSSocket<BufLen>::write(const char *msg, ...)
 		throw("FGFSSocket::write/select: timeout exceeded");
 
 	va_start(va, msg);
-	vsnprintf(buf, BufLen - 2, msg, va);
+	vsnprintf(buf, m_buflen - 2, msg, va);
 	va_end(va);
 	//std::cout << "SEND: " << buf << std::endl;
 	strcat(buf, "\015\012");
@@ -104,13 +110,12 @@ int FGFSSocket<BufLen>::write(const char *msg, ...)
 	return len;
 }
 
-template <unsigned int BufLen>
-const char * FGFSSocket<BufLen>::read(void)
+const char * FGFSSocket::read(void)
 {
-	char *p;
+	
 	fd_set fd;
 	struct timeval tv;
-	ssize_t len;
+	
 
 	FD_ZERO(&fd);
 	FD_SET(m_sock, &fd);
@@ -123,12 +128,13 @@ const char * FGFSSocket<BufLen>::read(void)
 			throw("FGFSSocket::read/select: timeout exceeded");
 	}
 
-	len = ::read(m_sock, m_buffer, BufLen - 1);
+	ssize_t len = ::read(m_sock, m_buffer, m_buflen - 1);
 	if (len < 0)
 		throw("FGFSSocket::read/read");
 	if (len == 0)
 		return 0;
 
+   char *p;
 	for (p = &m_buffer[len - 1]; p >= m_buffer; p--)
 		if (*p != '\015' && *p != '\012')
 			break;
@@ -136,8 +142,7 @@ const char * FGFSSocket<BufLen>::read(void)
 	return strlen(m_buffer) ? m_buffer : 0;
 }
 
-template <unsigned int BufLen>
-inline void FGFSSocket<BufLen>::flush(void)
+inline void FGFSSocket::flush(void)
 {
 	auto const i = m_timeout;
 	m_timeout = 0_s;
@@ -145,5 +150,3 @@ inline void FGFSSocket<BufLen>::flush(void)
 		;
 	m_timeout = i;
 }
-
-template class FGFSSocket<256U>;
