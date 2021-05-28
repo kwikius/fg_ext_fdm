@@ -18,13 +18,15 @@ CXX = g++-7
 CXXFLAGS = -fmax-errors=1 -std=c++14 -I$(QUAN_ROOT) -I$(SRC_DIR)/include
 CXXLIBS = -lpthread
 
-OBJECTS = $(patsubst %.o, $(BUILD_DIR)/%.o, main.o fgfsclient.o )
+OBJECTS = $(patsubst %.o, $(BUILD_DIR)/%.o, main.o fgfs_telnet.o)
+
+VPATH = $(SRC_DIR)
 
 .PHONY : all test clean
 
-all :  $(BIN_DIR)/net_fdm.exe 
+all :  $(BIN_DIR)/telnet.exe 
 
-$(BIN_DIR)/%.exe : $(OBJECTS)
+$(BIN_DIR)/telnet.exe : $(OBJECTS)
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) $(CXXLIBS)
 	@echo .......................
@@ -37,5 +39,3 @@ $(BUILD_DIR)/%.o : %.cpp
 
 clean:
 	-rm -rf $(BUILD_DIR)/*.o $(BIN_DIR)/*.asm $(BIN_DIR)/*.exe
-
-

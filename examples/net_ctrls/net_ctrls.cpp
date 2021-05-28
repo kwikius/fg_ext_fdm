@@ -15,7 +15,7 @@
 #include <quan/time.hpp>
 
 /**
-*  @brief Try sending in control structure to FlightGear. Unfortunately doesnt work.
+*  @brief Try sending in control structure to FlightGear. Unfortunately doesnt work very well.
 *  It appears you have to also send in net_fdm structure.
 *  or read modify write the control structure
 *

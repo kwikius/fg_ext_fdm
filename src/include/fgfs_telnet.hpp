@@ -14,8 +14,9 @@ public:
 
    static constexpr char default_host[] = "localhost";
    static constexpr unsigned default_port = 5501;
+   static constexpr size_t default_buffer_size = 256;
 
-	fgfs_telnet(const char *name = default_host, unsigned port = default_port, size_t buffer_size = 256);
+	fgfs_telnet(const char *name = default_host, unsigned port = default_port, size_t buffer_size = default_buffer_size);
 	~fgfs_telnet();
 
    template <typename T>
@@ -28,12 +29,11 @@ public:
 /**
   @return pointer to internal buffer with result or null
 */
-	const char* read(void);
-	void flush(void);
+	const char* read();
+	void flush();
 	void settimeout(quan::time_<int32_t>::s t) { m_timeout = t; }
-
+	int  close();
 private:
-	int		close(void);
 	int		m_sock;
 	char *	m_buffer;
    size_t   m_buflen;

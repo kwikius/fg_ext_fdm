@@ -18,15 +18,18 @@ CXX = g++-7
 CXXFLAGS = -fmax-errors=1 -std=c++14 -I$(QUAN_ROOT) -I$(SRC_DIR)/include
 CXXLIBS = -lpthread
 
-OBJECTS = $(patsubst %.o, $(BUILD_DIR)/%.o, main.o fgfsclient.o )
+OBJECTS = $(patsubst %.o, $(BUILD_DIR)/%.o, main.o fgfs_fdm_in.o fgfs_telnet.o)
+
+TARGET = flightgear_sitl_io.exe
+VPATH = $(SRC_DIR)
 
 .PHONY : all test clean
 
-all :  $(BIN_DIR)/net_fdm.exe 
+all :  $(BIN_DIR)/$(TARGET) 
 
-$(BIN_DIR)/%.exe : $(OBJECTS)
+$(BIN_DIR)/$(TARGET) : $(OBJECTS)
 	@mkdir -p $(BIN_DIR)
-	$(CXX) $(CXXFLAGS) -o $@ $(OBJECTS) $(CXXLIBS)
+	$(CXX) -o $@ $(OBJECTS) $(CXXLIBS)
 	@echo .......................
 	# executable in ./$@
 	@echo ....... OK ............
