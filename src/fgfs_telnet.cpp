@@ -1,16 +1,13 @@
 
-#include <errno.h>
+#include <cstdarg>
+#include <cstdio>
+#include <cerrno>
+#include <cstring>
+#include <unistd.h>
 
 #include <netdb.h>
 #include <netinet/in.h>
-#include <stdarg.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <string.h>
+
 #include <fgfs_telnet.hpp>
 
 /*
