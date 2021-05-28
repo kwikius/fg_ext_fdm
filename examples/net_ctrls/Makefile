@@ -17,12 +17,13 @@ SRC_DIR = ../../src
 CXX = g++-7
 CXXFLAGS = -fmax-errors=1 -std=c++14 -I$(QUAN_ROOT) -I$(SRC_DIR)/include
 CXXLIBS = -lpthread
+TARGET = net_ctrls.exe
 
 .PHONY : all test clean
 
-all :  $(BIN_DIR)/net_ctrls.exe 
+all :  $(BIN_DIR)/$(TARGET) 
 
-$(BIN_DIR)/%.exe : $(BUILD_DIR)/%.o
+$(BIN_DIR)/$(TARGET) : $(BUILD_DIR)/%.o
 	@mkdir -p $(BIN_DIR)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CXXLIBS)
 	@echo .......................

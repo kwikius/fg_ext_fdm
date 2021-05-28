@@ -18,13 +18,13 @@ CXX = g++-7
 CXXFLAGS = -fmax-errors=1 -std=c++14 -I$(QUAN_ROOT) -I$(SRC_DIR)/include
 CXXLIBS = -lpthread
 
-TARGET = net_fdm_out.exe
+TARGET = net_fdm_in.exe
 
 .PHONY : all test clean
 
 all :  $(BIN_DIR)/$(TARGET) 
 
-$(BIN_DIR)/$(TARGET) : $(BUILD_DIR)/net_fdm_out.o
+$(BIN_DIR)/$(TARGET) : $(BUILD_DIR)/net_fdm_in.o
 	@mkdir -p $(BIN_DIR)
 	$(CXX) -o $@ $< $(CXXLIBS)
 	@echo .......................

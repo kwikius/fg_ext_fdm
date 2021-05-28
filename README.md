@@ -5,13 +5,30 @@ Controlling FlightGear externally using C++
 
 Description
 -----------
- Simple example of how to control Flightgear externally, using sockets. 
+ Some examples of how to control Flightgear externally, using sockets.
 
-examples/net_fdm_in
+Examples
+--------
+  * examples/net_fdm_out.
+     The aircraft is suspended in space.
+     Use the joystick to pose the model in roll, pitch and yaw. <br> 
+     <a href="#note1" id="note1back"><sup>1</sup></a> Choose either euler angles or quaternions:
+     [Watch on Youtube](https://www.youtube.com/watch?v=27LC2WRK0Rk)
 
- The aircraft is suspended in space.
- Use the joystick to pose the model in roll, pitch and yaw. <a href="#note1" id="note1back"><sup>1</sup></a> <br>
- [Watch on Youtube](https://www.youtube.com/watch?v=27LC2WRK0Rk)
+  * examples/net_fdm_in.
+    Retrieves the net_fdm structure from Flightgear. Displays current pitch roll and yaw values. N.B. Plane is controlled by Joystick internally from Flightgear
+
+  * examples/telnet.
+    Read and write variables to/from FlightGear telnet interface. Sends joystick values to control aircraft using telnet protocol.
+
+  * examples/io.
+    Sends control values (roll, pitch, yaw) in to control the aircraft and reads the FlightGear fdm structure, the basic requirements for SITL.
+    Control is from joystick but can quite easily be injected from another source such as an autopilot or flightcontroller.
+    Similarly the outputs of the fdm structure should be adequate to simulate sensors. 
+
+  - <a id="note1" href="#note1back">[1]</a>   
+    * $< net_fdm_out -r euler  # Map joystick to world coordinates using euler angles
+    * $< net_fdm_out -r quat   # map the joystick to model frame using quaternion.
 
 Requires
 --------
@@ -30,20 +47,19 @@ Build
 
 Run
 ---
-   - Enter $(project)/scripts directory.
-   - $< ./flightgear.sh  # to start Flightgear
-   - Wait for Flighgear to start and aircraft is visible.
-   - Make a new terminal and cd to $(project)/bin directory 
+   - Enter $(project)/examples/\<example\> directory.
    - Turn on Taranis transmitter and plug into usb port ( or otherwise activate the joystick port on "/dev/input/js0").
-   - $< ./main.exe  # to start communicating
-   - Twiddling sticks should now cause  aircraft to change attitude
+   - $< ./flightgear.sh  # to start Flightgear
+   - Wait for Flightgear to start and aircraft is visible.
+   - Make a new terminal and cd to $(project)/bin directory 
+   - $< ./bin/\<example\>.exe  # to start communicating
+   - Twiddling sticks should now control the sim.
 
 Issues/ToDo
 -----------
   - You may need to change channels or directions of channels on your transmitter to get things working smoothly.
   - Allow the gps location in $(project)/scripts/flightgear.sh and src/main.cpp to your own area/scenery.
-  - <a id="note1" href="#note1back">[1]</a>  Currently whether the joystick uses World Frame or ModelFrame is hard coded.
-     Todo use command line args
+
 
 Acknowledgements
 ---------------
