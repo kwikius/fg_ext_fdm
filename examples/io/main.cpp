@@ -15,10 +15,10 @@
 */
 
 /**
- @file
- FlightGear IO. Basic requirements for SITL.
- Read NET_FDM data structure from Flightgear. Display some values.
- Write control values to FlightGear from joystick using telnet
+ * @file
+ *  FlightGear IO. Basic requirements for SITL.
+ * Read NET_FDM data structure from Flightgear. Display some values.
+ * Write control values to FlightGear from joystick using telnet
 **/
 
 namespace {

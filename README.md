@@ -5,7 +5,10 @@ Controlling FlightGear externally using C++
 
 Description
 -----------
- Simple example of how to control Flightgear externally, using a socket. 
+ Simple example of how to control Flightgear externally, using sockets. 
+
+examples/net_fdm_in
+
  The aircraft is suspended in space.
  Use the joystick to pose the model in roll, pitch and yaw. <a href="#note1" id="note1back"><sup>1</sup></a> <br>
  [Watch on Youtube](https://www.youtube.com/watch?v=27LC2WRK0Rk)
