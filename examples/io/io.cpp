@@ -65,7 +65,7 @@ namespace {
     *  send control values using FlightGear telnet protocol
     *  to access the flightgear property system.
     **/
-   void set_controls(fgfs_telnet & telnet_out, quan::joystick & js )
+   void set_controls(fgfs_telnet & telnet_out, quan::joystick const & js )
    {
       auto get_js_percent = [&js](int32_t i)->double {
          return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
@@ -106,26 +106,23 @@ namespace {
 int main(const int argc, const char *argv[])
 {
    try {
-
       fprintf(stdout, "Flightgear io\n");
 
       fgfs_telnet telnet_out("localhost", 5501);
-
-
       fgfs_fdm_in fdm_in("localhost",5600);
       quan::joystick joystick_in{"/dev/input/js0"};
       quan::timer<> timer;
-      quan::time::us t = timer();
 
+      quan::time::us t = timer();
       for (;;){
          fdm_in.update();
          output_fdm(fdm_in.get_fdm());
          set_controls(telnet_out,joystick_in);
-         auto const dt = timer() - t;
-         t = timer();
+         auto const newtime = timer();
+         auto const dt = newtime - t;
+         t = newtime;
          usleep(18000_us - dt );
       }
-      
       return EXIT_SUCCESS;
 
    } catch (const char s[]) {
