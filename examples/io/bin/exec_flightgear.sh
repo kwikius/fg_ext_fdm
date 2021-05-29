@@ -1,6 +1,5 @@
 #!/bin/bash
-#!/bin/bash
-fgfs \
+/usr/games/fgfs \
 --in-air \
 --aircraft=easystar  \
 --prop:/input/joysticks/js[0]=0 \

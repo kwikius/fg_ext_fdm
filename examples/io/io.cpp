@@ -7,6 +7,8 @@
 #include <quan/joystick.hpp>
 #include <quan/utility/timer.hpp>
 #include <quan/out/angle.hpp>
+#include <quan/fs/get_file_dir.hpp>
+#include <string>
 
 #include <iostream>
 #include <chrono>
@@ -113,45 +115,48 @@ namespace {
    }
 }
 
-/**
-* @todo start flightgear from the app
-**/
-
 int main(const int argc, const char *argv[])
 {
-  
-   try {
-      using namespace std::chrono_literals;
-      fprintf(stdout, "Flightgear io\n");
+   int pid = fork();
+   if (pid == 0){
+      //run flightgear in child process
+      auto const path =  quan::fs::get_file_dir(argv[0]) + "/exec_flightgear.sh";
+      return system(path.c_str());
+   }else{
+      try {
+         using namespace std::chrono_literals;
+         fprintf(stdout, "Flightgear io demo\n");
+         quan::joystick joystick_in{"/dev/input/js0"};
 
-      quan::joystick joystick_in{"/dev/input/js0"};
+         fgfs_fdm_in fdm_in("localhost",5600);
 
-      fgfs_fdm_in fdm_in("localhost",5600);
+         // wait for FlightGear to start sending packets
+         while ( !fdm_in.poll_fdm(1.0_s) ){
+            fprintf(stdout, "Waiting for FlightGear to start...\n");
+         }
 
-      // wait for FlightGear to start sending packets
-      while ( !fdm_in.poll_fdm(1.0_s) ){
-         fprintf(stdout, "Waiting for FlightGear to start...\n");
+         // Once FlightGear is running then telnet should succeed
+         fgfs_telnet telnet_out("localhost", 5501);
+
+         for (;;){
+            fdm_in.update();
+            output_fdm(fdm_in.get_fdm());
+            set_controls(telnet_out,joystick_in);
+            std::this_thread::sleep_until( std::chrono::steady_clock::now() + 20ms);
+         }
+         
+         return EXIT_SUCCESS;
+
+      } catch (const char s[]) {
+         std::cerr << "Error: " << s << ": " << strerror(errno) << std::endl;
+         return EXIT_FAILURE;
+      } catch (std::exception & e){
+         std::cerr << "Error: " << e.what() << std::endl;
+         return EXIT_FAILURE;
+      } catch (...) {
+         std::cerr << "Error: unknown exception" << std::endl;
+         return EXIT_FAILURE;
       }
-
-      // Once FlightGear is running then telnet should succeed
-      fgfs_telnet telnet_out("localhost", 5501);
-
-      for (;;){
-         fdm_in.update();
-         output_fdm(fdm_in.get_fdm());
-         set_controls(telnet_out,joystick_in);
-         std::this_thread::sleep_until( std::chrono::steady_clock::now() + 20ms);
-      }
-      return EXIT_SUCCESS;
-
-   } catch (const char s[]) {
-      std::cerr << "Error: " << s << ": " << strerror(errno) << std::endl;
-      return EXIT_FAILURE;
-   } catch (std::exception & e){
-      std::cerr << "Error: " << e.what() << std::endl;
-      return EXIT_FAILURE;
-   } catch (...) {
-      std::cerr << "Error: unknown exception" << std::endl;
-      return EXIT_FAILURE;
    }
 }
+
