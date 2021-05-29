@@ -76,16 +76,23 @@ namespace {
     *  @brief Read values from joystick, convert then
     *  send control values using FlightGear telnet protocol
     *  to access the flightgear property system.
+    *  @return true if controls 
     **/
-   void set_controls(fgfs_telnet & telnet_out, quan::joystick const & js )
+   bool set_controls(fgfs_telnet & telnet_out, quan::joystick const & js )
    {
-      auto get_js_percent = [&js](int32_t i)->double {
-         return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
-      };
-      telnet_out.set("/controls/flight/aileron",get_js_percent(roll_idx));
-      telnet_out.set("/controls/flight/elevator",get_js_percent(pitch_idx));
-      telnet_out.set("/controls/flight/rudder",get_js_percent(yaw_idx));
-      telnet_out.set("/controls/engines/engine[0]/throttle", get_js_percent(throttle_idx) + 1.0);
+      try{
+         auto get_js_percent = [&js](int32_t i)->double {
+            return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
+         };
+         telnet_out.set("/controls/flight/aileron",get_js_percent(roll_idx));
+         telnet_out.set("/controls/flight/elevator",get_js_percent(pitch_idx));
+         telnet_out.set("/controls/flight/rudder",get_js_percent(yaw_idx));
+         telnet_out.set("/controls/engines/engine[0]/throttle", get_js_percent(throttle_idx) + 1.0);
+         return true;
+      }catch(...){
+         // probably flightgear stopped
+         return false;
+      }
    }
 }
 
@@ -119,44 +126,64 @@ int main(const int argc, const char *argv[])
 {
    int pid = fork();
    if (pid == 0){
-      //run flightgear in child process
+     // run flightgear in child process
       auto const path =  quan::fs::get_file_dir(argv[0]) + "/exec_flightgear.sh";
       return system(path.c_str());
    }else{
-      try {
-         using namespace std::chrono_literals;
-         fprintf(stdout, "Flightgear io demo\n");
-         quan::joystick joystick_in{"/dev/input/js0"};
+     if ( pid > 0){
+         try {
+            using namespace std::chrono_literals;
+            fprintf(stdout, "Flightgear io demo\n");
+            quan::joystick joystick_in{"/dev/input/js0"};
 
-         fgfs_fdm_in fdm_in("localhost",5600);
+            fgfs_fdm_in fdm_in("localhost",5600);
 
-         // wait for FlightGear to start sending packets
-         while ( !fdm_in.poll_fdm(1.0_s) ){
-            fprintf(stdout, "Waiting for FlightGear to start...\n");
+            // wait for FlightGear to start sending packets
+            while ( !fdm_in.poll_fdm(1.0_s) ){
+               fprintf(stdout, "Waiting for FlightGear to start...\n");
+            }
+
+            // Once FlightGear is running then telnet should succeed
+            fgfs_telnet telnet_out("localhost", 5501);
+            // but needs time to warm up
+            while(!fdm_in.poll_fdm(1.0_s)){
+                fprintf(stdout,"FlightGear initialising...\n");
+            }
+            fprintf(stdout,"FlightGear running\n");
+
+            for (;;){
+               if( fdm_in.poll_fdm(10.0_s)){
+                  fdm_in.update();
+                  output_fdm(fdm_in.get_fdm());
+                  if (set_controls(telnet_out,joystick_in)){
+                     std::this_thread::sleep_until( std::chrono::steady_clock::now() + 20ms);
+                  }else{
+                     fprintf(stdout,"set controls failed - quitting\n");
+                     break;
+                  }
+               }else{
+                  fprintf(stdout,"Lost FlighGear FDM updates");
+                  break;
+               }
+            }
+            
+            return EXIT_SUCCESS;
+
+         } catch (const char s[]) {
+            std::cerr << "Error: " << s << ": " << strerror(errno) << std::endl;
+            return EXIT_FAILURE;
+         } catch (std::exception & e){
+            std::cerr << "Error: " << e.what() << std::endl;
+            return EXIT_FAILURE;
+         } catch (...) {
+            std::cerr << "Error: unknown exception" << std::endl;
+            return EXIT_FAILURE;
          }
-
-         // Once FlightGear is running then telnet should succeed
-         fgfs_telnet telnet_out("localhost", 5501);
-
-         for (;;){
-            fdm_in.update();
-            output_fdm(fdm_in.get_fdm());
-            set_controls(telnet_out,joystick_in);
-            std::this_thread::sleep_until( std::chrono::steady_clock::now() + 20ms);
-         }
-         
-         return EXIT_SUCCESS;
-
-      } catch (const char s[]) {
-         std::cerr << "Error: " << s << ": " << strerror(errno) << std::endl;
-         return EXIT_FAILURE;
-      } catch (std::exception & e){
-         std::cerr << "Error: " << e.what() << std::endl;
-         return EXIT_FAILURE;
-      } catch (...) {
-         std::cerr << "Error: unknown exception" << std::endl;
-         return EXIT_FAILURE;
+      }else{
+         std::cout << "fork failed\n";
+         return -1;
       }
-   }
+  }
+  // }
 }
 

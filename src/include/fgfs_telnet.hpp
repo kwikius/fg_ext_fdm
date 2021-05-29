@@ -19,6 +19,9 @@ public:
 	fgfs_telnet(const char *name = default_host, unsigned port = default_port, size_t buffer_size = default_buffer_size);
 	~fgfs_telnet();
 
+   bool is_readable(quan::time::s const & t) const;
+   bool is_writeable(quan::time::s const & t) const;
+
    template <typename T>
    bool get(const char* prop, T& val) const;
 
