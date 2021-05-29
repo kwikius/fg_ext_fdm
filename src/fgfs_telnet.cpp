@@ -92,6 +92,9 @@ fgfs_telnet::fgfs_telnet(const char *hostname, unsigned port,size_t buflen) :
 	serv_addr.sin_port = htons(port);
 	serv_addr.sin_addr = *(struct in_addr *)hostinfo->h_addr;
 
+/**
+  * @todo change this to loop trying to connect for a certain time or forever
+**/
 	if (::connect(m_sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
 		close();
       delete[] m_buffer;
@@ -131,21 +134,26 @@ int fgfs_telnet::close(void)
 
 bool fgfs_telnet::write(const char *msg, ...)const
 {
-	va_list va;
+   {
+      fd_set fd;
+      struct timeval tv;
+
+      FD_ZERO(&fd);
+      FD_SET(m_sock, &fd);
+      tv.tv_sec = static_cast<unsigned>(m_timeout.numeric_value());
+      tv.tv_usec = 0;
+      if (!::select(FD_SETSIZE, 0, &fd, 0, &tv)){
+         throw("fgfs_telnet::write/select: timeout exceeded");
+      }
+   }
+
 	char buf[m_buflen];
-	fd_set fd;
-	struct timeval tv;
-
-	FD_ZERO(&fd);
-	FD_SET(m_sock, &fd);
-	tv.tv_sec = static_cast<unsigned>(m_timeout.numeric_value());
-	tv.tv_usec = 0;
-	if (!::select(FD_SETSIZE, 0, &fd, 0, &tv))
-		throw("fgfs_telnet::write/select: timeout exceeded");
-
-	::va_start(va, msg);
-	::vsnprintf(buf, m_buflen - 2, msg, va);
-	::va_end(va);
+   {
+      va_list va;
+      ::va_start(va, msg);
+      ::vsnprintf(buf, m_buflen - 2, msg, va);
+      ::va_end(va);
+   }
 	::strcat(buf, "\015\012");
    ::ssize_t const len_to_write = ::strlen(buf);
 	::ssize_t const len_written = ::write(m_sock, buf,len_to_write );
@@ -155,21 +163,23 @@ bool fgfs_telnet::write(const char *msg, ...)const
 	return len_written == len_to_write;
 }
 
-const char * fgfs_telnet::read(void)
+const char * fgfs_telnet::read()
 {
-	fd_set fd;
-	struct timeval tv;
-	
-	FD_ZERO(&fd);
-	FD_SET(m_sock, &fd);
-	tv.tv_sec = static_cast<unsigned>(m_timeout.numeric_value());
-	tv.tv_usec = 0;
-	if (!select(FD_SETSIZE, &fd, 0, 0, &tv)) {
-		if (m_timeout == 0_s)
-			return 0;
-		else
-			throw("fgfs_telnet::read/select: timeout exceeded");
-	}
+   {
+      fd_set fd;
+      struct timeval tv;
+      
+      FD_ZERO(&fd);
+      FD_SET(m_sock, &fd);
+      tv.tv_sec = static_cast<unsigned>(m_timeout.numeric_value());
+      tv.tv_usec = 0;
+      if (!select(FD_SETSIZE, &fd, 0, 0, &tv)) {
+         if (m_timeout == 0_s)
+            return nullptr;
+         else
+            throw("fgfs_telnet::read/select: timeout exceeded");
+      }
+   }
 
 	ssize_t len = ::read(m_sock, m_buffer, m_buflen - 1);
 	if (len < 0)
@@ -182,7 +192,7 @@ const char * fgfs_telnet::read(void)
 		if (*p != '\015' && *p != '\012')
 			break;
 	*++p = '\0';
-	return strlen(m_buffer) ? m_buffer : 0;
+	return strlen(m_buffer) ? m_buffer : nullptr;
 }
 
 inline void fgfs_telnet::flush(void)

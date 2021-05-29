@@ -21,12 +21,20 @@
  * Write control values to FlightGear from joystick using telnet
 **/
 
+/**
+* @todo
+https://www.mail-archive.com/flightgear-users@lists.sourceforge.net/msg06993.html
+"Via the "telnet" interface you can set "/sim/freeze/master" to true or false
+in order to pause the sim."
+**/
+
 namespace {
 
    /**
     * @brief user defined time literal e.g 100_us
     **/
    QUAN_QUANTITY_LITERAL(time,us);
+   QUAN_QUANTITY_LITERAL(time,s);
 
    /**
     *  @brief overload sleep function with squan time type;
@@ -103,14 +111,25 @@ namespace {
    }
 }
 
+/**
+* @todo start flightgear from the app
+**/
+
 int main(const int argc, const char *argv[])
 {
    try {
       fprintf(stdout, "Flightgear io\n");
 
-      fgfs_telnet telnet_out("localhost", 5501);
-      fgfs_fdm_in fdm_in("localhost",5600);
       quan::joystick joystick_in{"/dev/input/js0"};
+
+      fgfs_fdm_in fdm_in("localhost",5600);
+
+      while ( !fdm_in.poll_fdm(1.0_s) ){
+         fprintf(stdout, "Waiting for FlightGear to start...\n");
+      }
+
+      fgfs_telnet telnet_out("localhost", 5501);
+
       quan::timer<> timer;
 
       quan::time::us t = timer();

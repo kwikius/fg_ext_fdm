@@ -7,75 +7,95 @@
 #include <fgfs_fdm_in.hpp>
 
 fgfs_fdm_in::fgfs_fdm_in(const char* hostname, int32_t port)
-:fdm{},m_socket_fd{::socket(AF_INET, SOCK_DGRAM, 0)}, m_address{}
+:fdm{},
+ m_socket_fd{::socket(AF_INET, SOCK_DGRAM, 0)}, // 
+ m_address{}
 {
-if (m_socket_fd == -1){
-   perror("open socket failed");
-   ::exit(errno);
-}else{
-   ::fprintf(stdout,"socket created\n");
+   if (m_socket_fd == -1){
+      ::perror("open socket failed");
+      ::exit(errno);
+   }
+
+   struct hostent* hostinfo = gethostbyname(hostname);
+   if (!hostinfo) {
+      close();
+      throw("fgfs_fdm_in/gethostbyname: unknown host");
+   }
+
+   m_address.sin_family = AF_INET;
+   m_address.sin_port = htons(port);
+   m_address.sin_addr = *(struct in_addr *)hostinfo->h_addr;
+
+   if (bind(m_socket_fd, (struct sockaddr *) &m_address,sizeof(m_address)) == -1){
+      close();
+      ::perror("bind");
+      ::exit(errno);
+   }else{
+      ::fprintf(stdout,"fdm in socket created\n");
+   }
 }
 
+/**
+int select(int nfds, fd_set *readfds, fd_set *writefds,
+           fd_set *exceptfds, struct timeval *timeout);
+**/
 
-struct hostent* hostinfo = gethostbyname(hostname);
-if (!hostinfo) {
-close();
-//  delete[] m_buffer;
-throw("fgfs_fdm_in/gethostbyname: unknown host");
-}
-/*
-struct sockaddr_in serv_addr;
-serv_addr.sin_family = AF_INET;
-serv_addr.sin_port = htons(port);
-
-*/
-
-m_address.sin_family = AF_INET;
-m_address.sin_port = htons(port);
-//
-//      if ( ::inet_pton(AF_INET, ip_address, &m_address.sin_addr) != 1){
-//         ::fprintf(stderr,"convert ip address failed\n");
-//         exit(-1);
-//      }
-
-m_address.sin_addr = *(struct in_addr *)hostinfo->h_addr;
-
-if (bind(m_socket_fd, (struct sockaddr *) &m_address,sizeof(m_address)) == -1){
-   close();
-   ::perror("bind");
-   ::exit(errno);
-}
-}
-
-fgfs_fdm_in::~fgfs_fdm_in()
+bool fgfs_fdm_in::poll_fdm(quan::time::s const & time_to_wait)const
 {
-close();
-}
+   fd_set fds;
+   struct timeval tv;
 
-void fgfs_fdm_in::close()
-{
-::close(m_socket_fd);
+   FD_ZERO(&fds);
+   FD_SET(m_socket_fd, &fds);
+   
+   tv.tv_sec = static_cast<unsigned>(time_to_wait.numeric_value()); // integer part
+   quan::time::us const tus = time_to_wait - quan::time::s{ static_cast<int>(tv.tv_sec)}; // microsec part
+   tv.tv_usec = static_cast<unsigned>(tus.numeric_value());
+
+   switch( ::select(FD_SETSIZE, &fds, 0, 0, &tv) ){
+      case 1:
+         return true;
+      case 0:
+         return false;
+      case -1:
+         throw("fgfs_fdm_in/poll_fdm bad select");
+      default:
+         throw("fgfs_fdm_in/poll_fdm bad unknown select");
+   }
 }
 
 bool fgfs_fdm_in::update()
 {
-socklen_t address_size = sizeof(m_address);
+   socklen_t address_size = sizeof(m_address);
 
-ssize_t const nbytes_read = ::recvfrom(m_socket_fd,&fdm, sizeof(fdm),0,(struct sockaddr*)&m_address, &address_size );
-if( nbytes_read == sizeof(fdm) ){
-    return true;
-}else{
-   if ( nbytes_read < 0){
-      ::perror("error in recvfrom\n");
-      exit(errno);
-   }else {
-      if ( nbytes_read == 0){
-         ::fprintf(stderr,"recvfrom socket no bytes read\n");
-         
-      }else{
-         ::fprintf(stderr,"unknown error\n");
+   // blocking read
+   ssize_t const nbytes_read = ::recvfrom(m_socket_fd,&fdm, sizeof(fdm),0,(struct sockaddr*)&m_address, &address_size );
+   if( nbytes_read == sizeof(fdm) ){
+       return true;
+   }else{
+      if ( nbytes_read < 0){
+         ::perror("error in recvfrom\n");
+         exit(errno);
+      }else {
+         if ( nbytes_read == 0){
+            ::fprintf(stderr,"recvfrom socket no bytes read\n");
+            
+         }else{
+            ::fprintf(stderr,"unknown error\n");
+         }
       }
    }
+   exit(errno);
 }
-exit(errno);
+
+void fgfs_fdm_in::close()
+{
+   ::close(m_socket_fd);
 }
+
+fgfs_fdm_in::~fgfs_fdm_in()
+{
+   close();
+}
+
+
