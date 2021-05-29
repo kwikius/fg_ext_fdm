@@ -9,6 +9,8 @@
 #include <quan/out/angle.hpp>
 
 #include <iostream>
+#include <chrono>
+#include <thread>
 /*
  Copyright (C) Andy Little 2021
  Derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
@@ -117,30 +119,28 @@ namespace {
 
 int main(const int argc, const char *argv[])
 {
+  
    try {
+      using namespace std::chrono_literals;
       fprintf(stdout, "Flightgear io\n");
 
       quan::joystick joystick_in{"/dev/input/js0"};
 
       fgfs_fdm_in fdm_in("localhost",5600);
 
+      // wait for FlightGear to start sending packets
       while ( !fdm_in.poll_fdm(1.0_s) ){
          fprintf(stdout, "Waiting for FlightGear to start...\n");
       }
 
+      // Once FlightGear is running then telnet should succeed
       fgfs_telnet telnet_out("localhost", 5501);
 
-      quan::timer<> timer;
-
-      quan::time::us t = timer();
       for (;;){
          fdm_in.update();
          output_fdm(fdm_in.get_fdm());
          set_controls(telnet_out,joystick_in);
-         auto const newtime = timer();
-         auto const dt = newtime - t;
-         t = newtime;
-         usleep(18000_us - dt );
+         std::this_thread::sleep_until( std::chrono::steady_clock::now() + 20ms);
       }
       return EXIT_SUCCESS;
 
