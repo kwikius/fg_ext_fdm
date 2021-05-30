@@ -49,6 +49,18 @@ namespace {
       ::usleep(static_cast<unsigned long>(t.numeric_value()));
    }
 
+   /**
+     * @todo For SITL we really need to separate controls out from joystick
+     * dont use joystick indices for controls!
+     * controls may come from autopilot
+     * Separate raw_joystick , normalised_joystick_controls
+     * or separate actual controls . indexes are clumsy
+     * Nice to know if control values changed too
+     * Control values should be normalised
+     * Two types of control values signed and unsigned
+     * flight_control.source = joystick or autopilot
+   **/
+
   /**
    * @brief range of raw Taranis joystick input is nominally +- 32767
    **/
@@ -176,7 +188,9 @@ int main(const int argc, const char *argv[])
    }else{
      if ( pid > 0){
          try {
+
             using namespace std::chrono_literals;
+
             fprintf(stdout, "Flightgear io demo\n");
             quan::joystick joystick_in{"/dev/input/js0"};
 
@@ -187,7 +201,7 @@ int main(const int argc, const char *argv[])
                fprintf(stdout, "Waiting for FlightGear to start...\n");
             }
 
-            // Once FlightGear is running telnet setup should succeed
+            // Once FlightGear is running, telnet setup should succeed
             fgfs_telnet telnet_out("localhost", 5501);
             // but FlighGear needs time to warm up
             while(!fdm_in.poll_fdm(1.0_s)){
@@ -197,6 +211,10 @@ int main(const int argc, const char *argv[])
 
             for (;;){
                auto const now = std::chrono::steady_clock::now();
+               /**
+                 *@brief We should run at Flighgear fdm update rate, set on cmdline
+                 * Here is the elastic, if FlightGear is late
+               **/
                if( fdm_in.poll_fdm(10.0_s)){
                   fdm_in.update();
                   output_fdm(fdm_in.get_fdm());
@@ -205,9 +223,10 @@ int main(const int argc, const char *argv[])
                      break;
                   }
                }else{
-                  fprintf(stdout,"Lost FlightGear FDM updates");
+                  fprintf(stdout,"FlightGear FDM update more than 10 s late");
                }
-               std::this_thread::sleep_until(now + 18ms);
+               // wake up just before the next fdm packet is available from FlightGear (hopefully!)
+               std::this_thread::sleep_until(now + 19ms);
             }
             return EXIT_SUCCESS;
 
@@ -225,7 +244,6 @@ int main(const int argc, const char *argv[])
          std::cout << "fork failed\n";
          return -1;
       }
-  }
-  // }
+   }
 }
 
