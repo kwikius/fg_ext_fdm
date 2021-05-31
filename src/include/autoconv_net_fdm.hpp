@@ -82,10 +82,6 @@ public:
    template <typename T>
    using deg_F = typename quan::temperature_<T>::F;
 
-   /**
-      @todo temperature::F
-   **/
-
     autoconv_FGNetFDM()
     : version{FG_NET_FDM_VERSION}
     {}

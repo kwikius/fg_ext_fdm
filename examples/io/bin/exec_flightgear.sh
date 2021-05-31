@@ -1,7 +1,7 @@
 #!/bin/bash
 /usr/games/fgfs \
 --in-air \
---aircraft=ask13 \
+--aircraft=c172p \
 --prop:/input/joysticks/js[0]=0 \
 --fg-scenery=/usr/share/games/flightgear/Scenery \
 --fg-aircraft=/home/andy/cpp/projects/aerfpilot/Tools/autotest/aircraft/ \

@@ -3,6 +3,7 @@
 
 #include "fgfs_telnet.hpp"
 #include "fgfs_fdm_in.hpp"
+#include <flight_control_source.hpp>
 
 #include <quan/joystick.hpp>
 #include <quan/utility/timer.hpp>
@@ -86,7 +87,7 @@ namespace {
    };
 
    /**
-     * @brief FlightGear control surface outputs can be signed or unsigned.
+     * @brief FlightGear flight_dimension outputs can be signed or unsigned.
      * Signed control surface   output range -1.0 to 1.0
      * Unsigned control surface output range  0.0 to 1.0 
     **/
@@ -105,7 +106,7 @@ namespace {
     *  send control values using FlightGear telnet protocol
     *  to access the flightgear property system.
     *  @return true if successful
-    *  @todo. Maybe better to just cache the raw joystick input?
+    *  @todo. better to send controls from virtual control_source
     **/
    bool set_controls(fgfs_telnet & telnet_out, quan::joystick const & js )
    {
