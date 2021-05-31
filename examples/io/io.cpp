@@ -1,20 +1,20 @@
 
 #include <cstring>
-
-#include "fgfs_telnet.hpp"
-#include "fgfs_fdm_in.hpp"
-#include <flight_control_source.hpp>
-
-#include <quan/joystick.hpp>
-#include <quan/utility/timer.hpp>
-#include <quan/out/angle.hpp>
-#include <quan/fs/get_file_dir.hpp>
-#include <quan/constrain.hpp>
 #include <string>
 
 #include <iostream>
 #include <chrono>
 #include <thread>
+
+#include <quan/utility/timer.hpp>
+#include <quan/out/angle.hpp>
+#include <quan/fs/get_file_dir.hpp>
+#include <quan/constrain.hpp>
+
+#include "fgfs_telnet.hpp"
+#include "fgfs_fdm_in.hpp"
+#include <flight_controller.hpp>
+#include <joystick_control_source.hpp>
 /*
  Copyright (C) Andy Little 2021
  Derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
@@ -27,13 +27,6 @@
  * Write control values to FlightGear from joystick using telnet
 **/
 
-/**
-* @todo
-https://www.mail-archive.com/flightgear-users@lists.sourceforge.net/msg06993.html
-"Via the "telnet" interface you can set "/sim/freeze/master" to true or false
-in order to pause the sim."
-**/
-
 namespace {
 
    /**
@@ -42,119 +35,9 @@ namespace {
    QUAN_QUANTITY_LITERAL(time,us);
    QUAN_QUANTITY_LITERAL(time,s);
 
-   /**
-    *  @brief overload sleep function with squan time type;
-    **/
-   void usleep(quan::time::us const & t)
-   {
-      ::usleep(static_cast<unsigned long>(t.numeric_value()));
-   }
-
-   /**
-     * @todo For SITL we really need to separate controls out from joystick
-     * dont use joystick indices for controls!
-     * controls may come from autopilot
-     * Separate raw_joystick , normalised_joystick_controls
-     * or separate actual controls . indexes are clumsy
-     * Nice to know if control values changed too
-     * Control values should be normalised
-     * Two types of control values signed and unsigned
-     * flight_control.source = joystick or autopilot
-   **/
-
-  /**
-   * @brief range of raw Taranis joystick input is nominally +- 32767
-   **/
-   static constexpr double joystick_half_range = 32767.0;
-   
-   /**
-    * @brief channel numbers of joystick channels
-   **/
-   static constexpr uint8_t roll_idx = 0;  // roll on ch 0
-   static constexpr uint8_t pitch_idx = 1; // pitch on ch 1
-   static constexpr uint8_t throttle_idx = 2;
-   static constexpr uint8_t yaw_idx = 3;   // yaw on ch 3
-
-   /**
-    * @brief joystick channel direction of raw joystick input, 
-    * either 1 or -1 dependent on joystick setup
-   **/
-   static constexpr int32_t js_sign []= {
-      1,   // roll
-      1,   // pitch
-      1,   // throttle
-      -1   // yaw
-   };
-
-   /**
-     * @brief FlightGear flight_dimension outputs can be signed or unsigned.
-     * Signed control surface   output range -1.0 to 1.0
-     * Unsigned control surface output range  0.0 to 1.0 
-    **/
-    static constexpr bool control_is_signed []= {
-      true,   // roll
-      true,   // pitch
-      false,  // throttle
-      true    // yaw
-   };
-
-   /// @brief cache last values sent so we only need to update if changed
-   double controls_cache [4] = {0.0,0.0,0.0,0.0};
-
-   /**
-    *  @brief Read values from joystick, convert then, if changed,
-    *  send control values using FlightGear telnet protocol
-    *  to access the flightgear property system.
-    *  @return true if successful
-    *  @todo. better to send controls from virtual control_source
-    **/
-   bool set_controls(fgfs_telnet & telnet_out, quan::joystick const & js )
-   {
-      try{
-         /// @brief convert raw joystick value to flightgear value
-         auto get_js_percent = [&js](int32_t i)->double {
-            if (control_is_signed[i]){
-               return quan::constrain(
-                  static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range
-                  ,-1.0
-                  ,1.0
-               );
-            }else{
-               return quan::constrain(
-                 (static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range + 1.0) / 2.0 
-                  ,0.0
-                  ,1.0
-               );
-            }
-         };
-
-         /// @brief only send control values to FlightGear if actually changed
-         auto out_cached = [&telnet_out,&get_js_percent](const char* prop, int32_t control_idx) -> bool {
-            double const v = get_js_percent(control_idx);
-            if ( v == controls_cache[control_idx]){
-               return true;
-            }else{
-               controls_cache[control_idx] = v;
-               return telnet_out.set(prop,v);
-            }
-         };
-
-         out_cached("/controls/flight/aileron",roll_idx);
-         out_cached("/controls/flight/elevator",pitch_idx);
-         out_cached("/controls/flight/rudder",yaw_idx);
-         out_cached("/controls/engines/engine[0]/throttle",throttle_idx);
-
-         return true;
-      }catch(...){
-         // probably flightgear stopped
-         fprintf(stderr,"Exception in set_controls\n");
-         return false;
-      }
-   }
-}
-
-namespace {
-
+   // indirect system floating point type e.g for microcontrollers
+   using float_type = quan::quantity_traits::default_value_type;
+ 
    /**
    *  @brief Display some FDM data to stdout
    *  @param fdm - The readonly fdm retrieved from FlightGear
@@ -179,21 +62,50 @@ namespace {
    }
 }
 
+struct joystick_t{
+
+  joystick_t( const char * path)
+  : m_js{path}
+  , roll{m_js}
+  , pitch{m_js}
+  , yaw{m_js}
+  , throttle{m_js}
+  {}
+private:
+   quan::joystick m_js;
+public:
+   joystick_control_source<FlightDimension::Roll> const roll;
+   joystick_control_source<FlightDimension::Pitch> const pitch;
+   joystick_control_source<FlightDimension::Yaw> const yaw;
+   joystick_control_source<FlightDimension::Throttle> const throttle;
+};
+
+namespace {
+
+   void set_flight_controls( flight_controller & fc, joystick_t const & js)
+   {
+      fc.set_roll_source(js.roll);
+      fc.set_pitch_source(js.pitch);
+      fc.set_yaw_source(js.yaw);
+      fc.set_throttle_source(js.throttle);
+   }
+}
+
 int main(const int argc, const char *argv[])
 {
    int pid = fork();
    if (pid == 0){
-     // run flightgear in child process
+     ///@brief run flightgear in child process
       auto const path = quan::fs::get_file_dir(argv[0]) + "/exec_flightgear.sh";
       return system(path.c_str());
    }else{
      if ( pid > 0){
          try {
-
             using namespace std::chrono_literals;
 
             fprintf(stdout, "Flightgear io demo\n");
-            quan::joystick joystick_in{"/dev/input/js0"};
+
+            joystick_t js("/dev/input/js0");
 
             fgfs_fdm_in fdm_in("localhost",5600);
 
@@ -204,6 +116,40 @@ int main(const int argc, const char *argv[])
 
             // Once FlightGear is running, telnet setup should succeed
             fgfs_telnet telnet_out("localhost", 5501);
+
+            // OK have joystick input, fdm and telnet so start flight controller
+            flight_controller fc;
+
+            set_flight_controls(fc,js);
+
+            /// @brief store current values of controls
+            float_type flight_controls_cache[8] = {0.0};
+
+            /// @brief only set a property if its value changed
+            auto set_control = [&telnet_out] ( const char * prop, float_type const & latest, float_type& cached)
+            {
+               if ( latest == cached){
+                  return true;
+               }else{
+                  cached = latest;
+                  return telnet_out.set(prop,latest);
+               }
+            };
+  
+            /// @brief so output all the modified flight controls to FlightGear
+            auto set_controls = [ &set_control, &fc, &flight_controls_cache ]() -> bool
+            {
+               try {
+                  return 
+                     set_control("/controls/flight/aileron",fc.get_roll(),flight_controls_cache[static_cast<int>(FlightDimension::Roll)]) &&
+                     set_control("/controls/flight/elevator",fc.get_pitch(),flight_controls_cache[static_cast<int>(FlightDimension::Pitch)]) &&
+                     set_control("/controls/flight/rudder",fc.get_yaw(),flight_controls_cache[static_cast<int>(FlightDimension::Yaw)]) &&
+                     set_control("/controls/engines/engine[0]/throttle",fc.get_throttle(),flight_controls_cache[static_cast<int>(FlightDimension::Throttle)]);
+               }catch(...){
+                  fprintf(stderr,"set controls failed\n");
+                  return false;
+               }
+            };
             // but FlighGear needs time to warm up
             while(!fdm_in.poll_fdm(1.0_s)){
                 fprintf(stdout,"FlightGear initialising...\n");
@@ -213,13 +159,13 @@ int main(const int argc, const char *argv[])
             for (;;){
                auto const now = std::chrono::steady_clock::now();
                /**
-                 *@brief We should run at Flighgear fdm update rate, set on cmdline
+                 * @brief We should run at Flightgear fdm update rate, set on cmdline
                  * Here is the elastic, if FlightGear is late
                **/
                if( fdm_in.poll_fdm(10.0_s)){
                   fdm_in.update();
                   output_fdm(fdm_in.get_fdm());
-                  if (!set_controls(telnet_out,joystick_in)){
+                  if (!set_controls()){
                      fprintf(stdout,"set controls failed - quitting\n");
                      break;
                   }

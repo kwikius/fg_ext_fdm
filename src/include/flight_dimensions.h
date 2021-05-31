@@ -7,6 +7,7 @@
 **/
 
 enum class FlightDimension : uint8_t {
+   Undefined,
    Yaw,
    Pitch,
    Roll,
