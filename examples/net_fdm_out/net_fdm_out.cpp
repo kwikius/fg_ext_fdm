@@ -21,6 +21,7 @@
 #include <quan/frequency.hpp>
 #include <quan/abs.hpp>
 #include <quan/constants/constant.hpp>
+#include <quan/fs/get_file_dir.hpp>
 
 /*
   Copyright (C) 2021 Andy Little see GNU GENERAL PUBLIC LICENSE V3
@@ -171,14 +172,21 @@ namespace {
 
 int main(int argc, char ** argv)
 {
-   if (process_args(argc, argv) != 0){
-      return 1;
+   int pid = fork();
+   if (pid == 0){
+     ///@brief run flightgear in child process
+      auto const path = quan::fs::get_file_dir(argv[0]) + "/exec_flightgear.sh";
+      return system(path.c_str());
+   }else{
+      if (process_args(argc, argv) != 0){
+         return 1;
+      }
+     
+      if ( setup_fdm_out_socket()){
+         run();
+      }
+      return 0;
    }
-  
-   if ( setup_fdm_out_socket()){
-      run();
-   }
-   return 0;
 }
 
 namespace {
@@ -394,7 +402,7 @@ namespace {
    }
 
    /**
-    *   @brief update fdm structuer with current pose
+    *   @brief update fdm structure with current pose
     **/
    void update(autoconv_FGNetFDM & fdm, pose_t const & pose )  
    {
@@ -406,6 +414,12 @@ namespace {
       fdm.phi = pose.x;
       fdm.theta = pose.y;
       fdm.psi = pose.z;
+      fdm.left_aileron = stick_percent.x;
+      fdm.right_aileron = -stick_percent.x;
+      fdm.elevator = -stick_percent.y;
+      fdm.rudder = stick_percent.z;
+      fdm.left_flap = 0.f;
+      fdm.right_flap = 0.f;
    };
 
    /**

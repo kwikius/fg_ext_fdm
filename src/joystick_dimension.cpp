@@ -1,5 +1,5 @@
 
-#include <joystick_control_source.hpp>
+#include <joystick_dimension.hpp>
 
 namespace {
 
@@ -56,24 +56,24 @@ namespace {
 }
 
 template <FlightDimension D>
-joystick_control_source<D>::joystick_control_source(quan::joystick const & js)
+joystick_dimension<D>::joystick_dimension(quan::joystick const & js)
 : m_joystick{js}{}
 
 template <FlightDimension D>
-typename joystick_control_source<D>::float_type
-joystick_control_source<D>::get_impl() const
+typename joystick_dimension<D>::float_type
+joystick_dimension<D>::get_impl() const
 {
    int constexpr i = get_joystick_channel_idx<D>;
    float_type const v = (m_joystick.get_channel(i) * js_sign[i]) / joystick_half_range;
    return(flight_dimension_is_signed<D>) ? v : ((v + 1.0) / 2.0) ;
 }
 
-template  class joystick_control_source<FlightDimension::Roll>;
-template  class joystick_control_source<FlightDimension::Pitch>;
-template  class joystick_control_source<FlightDimension::Yaw>;
-template  class joystick_control_source<FlightDimension::Throttle>;
-template  class joystick_control_source<FlightDimension::Flap>;
-template  class joystick_control_source<FlightDimension::Spoiler>;
+template  class joystick_dimension<FlightDimension::Roll>;
+template  class joystick_dimension<FlightDimension::Pitch>;
+template  class joystick_dimension<FlightDimension::Yaw>;
+template  class joystick_dimension<FlightDimension::Throttle>;
+template  class joystick_dimension<FlightDimension::Flap>;
+template  class joystick_dimension<FlightDimension::Spoiler>;
 
 
 

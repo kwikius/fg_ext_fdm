@@ -15,7 +15,7 @@ BUILD_DIR = build
 BIN_DIR = bin
 SRC_DIR = ../../src
 CXX = g++-9
-CXXFLAGS = -fmax-errors=1 -std=c++2a -I$(QUAN_ROOT) -I$(SRC_DIR)/include
+CXXFLAGS = -fmax-errors=1 -std=c++2a -fconcepts -I$(QUAN_ROOT) -I$(SRC_DIR)/include
 CXXLIBS = -lpthread
 
 OBJECTS = $(patsubst %.o, $(BUILD_DIR)/%.o, \
@@ -23,7 +23,7 @@ OBJECTS = $(patsubst %.o, $(BUILD_DIR)/%.o, \
  fgfs_fdm_in.o \
  fgfs_telnet.o \
  flight_controller.o \
- joystick_control_source.o \
+ joystick_dimension.o \
 )
 
 TARGET = io.exe

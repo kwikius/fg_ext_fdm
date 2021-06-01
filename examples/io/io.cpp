@@ -14,7 +14,7 @@
 #include "fgfs_telnet.hpp"
 #include "fgfs_fdm_in.hpp"
 #include <flight_controller.hpp>
-#include <joystick_control_source.hpp>
+#include <joystick.hpp>
 /*
  Copyright (C) Andy Little 2021
  Derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
@@ -62,32 +62,17 @@ namespace {
    }
 }
 
-struct joystick_t{
-
-  joystick_t( const char * path)
-  : m_js{path}
-  , roll{m_js}
-  , pitch{m_js}
-  , yaw{m_js}
-  , throttle{m_js}
-  {}
-private:
-   quan::joystick m_js;
-public:
-   joystick_control_source<FlightDimension::Roll> const roll;
-   joystick_control_source<FlightDimension::Pitch> const pitch;
-   joystick_control_source<FlightDimension::Yaw> const yaw;
-   joystick_control_source<FlightDimension::Throttle> const throttle;
-};
-
 namespace {
 
-   void set_flight_controls( flight_controller & fc, joystick_t const & js)
+   template <control_source CS>
+   void set_control_source( flight_controller & fc, CS const & cs)
    {
-      fc.set_roll_source(js.roll);
-      fc.set_pitch_source(js.pitch);
-      fc.set_yaw_source(js.yaw);
-      fc.set_throttle_source(js.throttle);
+      fc.set_roll_dimension(cs.roll);
+      fc.set_pitch_dimension(cs.pitch);
+      fc.set_yaw_dimension(cs.yaw);
+      fc.set_throttle_dimension(cs.throttle);
+      fc.set_flap_dimension(cs.flap);
+      fc.set_spoiler_dimension(cs.spoiler);
    }
 }
 
@@ -120,7 +105,7 @@ int main(const int argc, const char *argv[])
             // OK have joystick input, fdm and telnet so start flight controller
             flight_controller fc;
 
-            set_flight_controls(fc,js);
+            set_control_source(fc,js);
 
             /// @brief store current values of controls
             float_type flight_controls_cache[8] = {0.0};

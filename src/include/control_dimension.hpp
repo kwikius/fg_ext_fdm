@@ -6,18 +6,18 @@
 #include "flight_dimensions.h"
 
 /**
-* @file Flight control source These have no units and furthermore may cause side effeects
+* @file control source dimension These have no units and furthermore may cause side effeects
 * in other dimensions  (For example Throttle may be offset from centre
 * flap will change Cm so affect pitch etc
 * These effects are dependent on the actual aircraft
 **/
 template <FlightDimension D>
-struct flight_control_source{
+struct control_dimension{
    static constexpr FlightDimension flight_dimension = D;
    using float_type = quan::quantity_traits::default_value_type;
 
    /**
-     * @brief get the value of the control_source 
+     * @brief get the value of the control_source dimension
      * @return current value constrained to +-1 for signed and 0 to 1 for unsigned
    **/
    float_type get() const
@@ -27,17 +27,17 @@ struct flight_control_source{
 
       return quan::constrain(get_impl(),min_value , max_value);
    }
-   virtual ~flight_control_source(){}
+   virtual ~control_dimension(){}
 protected: 
    virtual float_type get_impl() const = 0;
-   constexpr flight_control_source(){};
+   constexpr control_dimension(){};
 };
 
 /**
 *  @brief default control source returns 0;
 **/
 template <FlightDimension D>
-struct default_flight_control_source final : flight_control_source<D>{
+struct default_control_dimension final : control_dimension<D>{
    using float_type = quan::quantity_traits::default_value_type;
    float_type get_impl() const final
    {
