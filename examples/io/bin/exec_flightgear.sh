@@ -1,9 +1,10 @@
 #!/bin/bash
 /usr/games/fgfs \
 --in-air \
---aircraft=c172p \
+--aircraft=Easystar \
 --prop:/input/joysticks/js[0]=0 \
---fg-scenery=/usr/share/games/flightgear/Scenery \
+--enable-terrasync \
+--fg-scenery=/home/andy/.fgfs/TerraSync \
 --fg-aircraft=/home/andy/cpp/projects/aerfpilot/Tools/autotest/aircraft/ \
 --units-meters \
 --altitude=800 \
