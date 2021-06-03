@@ -23,7 +23,7 @@ struct fgfs_fdm_in{
     * @brief check if new fdm data is available from flightgear
     * @return true if data is available (update() would not block) else false
     **/ 
-   bool poll_fdm(quan::time::s const & t)const;
+   bool poll(quan::time::s const & t)const;
    autoconv_FGNetFDM const & get_fdm()const { return fdm;}
 private:
    autoconv_FGNetFDM fdm;

@@ -83,23 +83,21 @@ int main(const int argc, const char *argv[])
             fgfs_fdm_in fdm_in("localhost",5600);
 
             // wait for FlightGear to start sending packets
-            while ( !fdm_in.poll_fdm(1.0_s) ){
+            while ( !fdm_in.poll(1.0_s) ){
                fprintf(stdout, "Waiting for FlightGear to start...\n");
             }
 
-            // Once FlightGear is running, telnet setup should succeed
+            // Only once FlightGear is running, telnet setup should succeed
             fgfs_telnet telnet_out("localhost", 5501);
 
-
-
             /**
-             * OK have joystick input, fdm and telnet so...
+             * Have joystick input, fdm and telnet so...
              * Create flight controller and plug in telnet and joystick. 
              **/
             flight_controller fc(telnet_out,js);
 
             //for luck, check we are still getting data from FlightGear...
-            while(!fdm_in.poll_fdm(1.0_s)){
+            while(!fdm_in.poll(1.0_s)){
                 fprintf(stdout,"FlightGear initialising...\n");
             }
 
@@ -113,7 +111,7 @@ int main(const int argc, const char *argv[])
                  * @brief We should run at Flightgear fdm update rate, set on cmdline in --telnet... to 50 times a sec
                  * Here is the elastic, if FlightGear is late
                **/
-               if( fdm_in.poll_fdm(10.0_s)){
+               if( fdm_in.poll(10.0_s)){
                   fdm_in.update();
                   output_fdm(fdm_in.get_fdm());
                   if (!fc.update()){

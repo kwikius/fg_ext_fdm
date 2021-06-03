@@ -40,7 +40,7 @@ int select(int nfds, fd_set *readfds, fd_set *writefds,
            fd_set *exceptfds, struct timeval *timeout);
 **/
 
-bool fgfs_fdm_in::poll_fdm(quan::time::s const & time_to_wait)const
+bool fgfs_fdm_in::poll(quan::time::s const & time_to_wait)const
 {
    fd_set fds;
    struct timeval tv;
@@ -58,9 +58,9 @@ bool fgfs_fdm_in::poll_fdm(quan::time::s const & time_to_wait)const
       case 0:
          return false;
       case -1:
-         throw("fgfs_fdm_in/poll_fdm bad select");
+         throw("fgfs_fdm_in/poll bad select");
       default:
-         throw("fgfs_fdm_in/poll_fdm bad unknown select");
+         throw("fgfs_fdm_in/poll unknown select");
    }
 }
 
