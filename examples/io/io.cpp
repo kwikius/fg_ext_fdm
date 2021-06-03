@@ -35,11 +35,11 @@ namespace {
    QUAN_QUANTITY_LITERAL(time,us);
    QUAN_QUANTITY_LITERAL(time,s);
 
-   // indirect system floating point type e.g for microcontrollers
+   // indirect system floating point type e.g for microcontrollers rpi etc
    using float_type = quan::quantity_traits::default_value_type;
  
    /**
-   *  @brief Display some FDM data to stdout
+   *  @brief Display some FDM data to stdout to show what is what
    *  @param fdm - The readonly fdm retrieved from FlightGear
    **/
    void output_fdm(autoconv_FGNetFDM const & fdm)
@@ -62,20 +62,6 @@ namespace {
    }
 }
 
-namespace {
-
-   template <control_source CS>
-   void set_control_source( flight_controller & fc, CS const & cs)
-   {
-      fc.set_roll_dimension(cs.roll);
-      fc.set_pitch_dimension(cs.pitch);
-      fc.set_yaw_dimension(cs.yaw);
-      fc.set_throttle_dimension(cs.throttle);
-      fc.set_flap_dimension(cs.flap);
-      fc.set_spoiler_dimension(cs.spoiler);
-   }
-}
-
 int main(const int argc, const char *argv[])
 {
    int pid = fork();
@@ -90,8 +76,10 @@ int main(const int argc, const char *argv[])
 
             fprintf(stdout, "Flightgear io demo\n");
 
+            // create the joystick
             joystick_t js("/dev/input/js0");
 
+            // create the class to receive fdm from FlightGear
             fgfs_fdm_in fdm_in("localhost",5600);
 
             // wait for FlightGear to start sending packets
@@ -102,66 +90,44 @@ int main(const int argc, const char *argv[])
             // Once FlightGear is running, telnet setup should succeed
             fgfs_telnet telnet_out("localhost", 5501);
 
-            // OK have joystick input, fdm and telnet so start flight controller
-            flight_controller fc;
 
-            set_control_source(fc,js);
 
-            /// @brief store current values of controls
-            float_type flight_controls_cache[8] = {0.0};
+            /**
+             * OK have joystick input, fdm and telnet so...
+             * Create flight controller and plug in telnet and joystick. 
+             **/
+            flight_controller fc(telnet_out,js);
 
-            /// @brief only set a property if its value changed
-            auto set_control = [&telnet_out] ( const char * prop, float_type const & latest, float_type& cached)
-            {
-               if ( latest == cached){
-                  return true;
-               }else{
-                  cached = latest;
-                  return telnet_out.set(prop,latest);
-               }
-            };
-  
-            /// @brief so output all the modified flight controls to FlightGear
-            auto set_controls = [ &set_control, &fc, &flight_controls_cache ]() -> bool
-            {
-               try {
-                  return 
-                     set_control("/controls/flight/aileron",fc.get_roll(),flight_controls_cache[static_cast<int>(FlightDimension::Roll)]) &&
-                     set_control("/controls/flight/elevator",fc.get_pitch(),flight_controls_cache[static_cast<int>(FlightDimension::Pitch)]) &&
-                     set_control("/controls/flight/rudder",fc.get_yaw(),flight_controls_cache[static_cast<int>(FlightDimension::Yaw)]) &&
-                     set_control("/controls/engines/engine[0]/throttle",fc.get_throttle(),flight_controls_cache[static_cast<int>(FlightDimension::Throttle)]);
-               }catch(...){
-                  fprintf(stderr,"set controls failed\n");
-                  return false;
-               }
-            };
-            // but FlighGear needs time to warm up
+            //for luck, check we are still getting data from FlightGear...
             while(!fdm_in.poll_fdm(1.0_s)){
                 fprintf(stdout,"FlightGear initialising...\n");
             }
+
             fprintf(stdout,"FlightGear running\n");
 
+            // OK start control loop.
+            // Joystick should now be controlling aircraft in FlightGear
             for (;;){
                auto const now = std::chrono::steady_clock::now();
                /**
-                 * @brief We should run at Flightgear fdm update rate, set on cmdline
+                 * @brief We should run at Flightgear fdm update rate, set on cmdline in --telnet... to 50 times a sec
                  * Here is the elastic, if FlightGear is late
                **/
                if( fdm_in.poll_fdm(10.0_s)){
                   fdm_in.update();
                   output_fdm(fdm_in.get_fdm());
-                  if (!set_controls()){
-                     fprintf(stdout,"set controls failed - quitting\n");
+                  if (!fc.update()){
+                     fprintf(stdout,"flight controller update failed - quitting\n");
                      break;
                   }
                }else{
                   fprintf(stdout,"FlightGear FDM update more than 10 s late");
                }
                // wake up just before the next fdm packet is available from FlightGear (hopefully!)
+               //@todo wakeup on SIGIO ?, 
                std::this_thread::sleep_until(now + 19ms);
             }
             return EXIT_SUCCESS;
-
          } catch (const char s[]) {
             std::cerr << "Error: " << s << ": " << strerror(errno) << std::endl;
             return EXIT_FAILURE;
