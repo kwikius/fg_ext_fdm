@@ -17,7 +17,7 @@
 
 struct flight_controller{
 
-   flight_controller(fgfs_telnet & t)
+   flight_controller(fgfs_telnet const & t)
    : m_telnet(t)
    ,m_roll{&m_default_roll}
    ,m_pitch{&m_default_pitch}
@@ -118,7 +118,7 @@ private:
    static default_control_dimension<FlightDimension::Spoiler> const m_default_spoiler;
    static default_control_dimension<FlightDimension::Flap> const  m_default_flap;
 
-   fgfs_telnet & m_telnet;
+   fgfs_telnet const & m_telnet;
 
    /// @brief store current values of controls
    float_type m_flight_controls_cache[8] = {0.0};

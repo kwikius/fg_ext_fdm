@@ -34,8 +34,8 @@ namespace {
       f.write("get %s",prop);
       const char* p = f.read();
       if (p){
-         double tmp = atof(p);
-         val = static_cast<T>(tmp);
+         double const v = atof(p);
+         val = static_cast<T>(v);
          return true;
       }else{
          return false;
@@ -52,12 +52,12 @@ namespace {
          return f.write("set %s %d",prop,v);
       }
 
-      bool get_int(fgfs_telnet & f, const char* prop, int & val)
+      static bool get(fgfs_telnet & f, const char* prop, T & val)
       {
          f.write("get %s",prop);
          const char* p = f.read();
          if (p){
-            int32_t v = atoi(p);
+            int32_t const v = atoi(p);
             val = static_cast<T>(v);
             return true;
          }else{
@@ -212,7 +212,7 @@ inline void fgfs_telnet::flush(void)
 }
 
 template <typename T>
-bool fgfs_telnet::get(const char* prop, T& val) const
+bool fgfs_telnet::get(const char* prop, T& val)
 {
    return ll_telnet<T>::get(*this,prop,val);
 }
@@ -226,4 +226,7 @@ bool fgfs_telnet::set(const char* prop, T const & val) const
  * @todo add explicit specialisations as reqd
 **/
 
-template bool fgfs_telnet:: set<double>(char const *,double const &) const;
+template bool fgfs_telnet::set<double>(char const *,double const &) const;
+
+template bool fgfs_telnet::get<double>(char const *,double &);
+template bool fgfs_telnet::get<int32_t>(char const *,int32_t &);

@@ -27,6 +27,8 @@ struct joystick_t{
   , flap{m_js}
   , spoiler{m_js}
   {}
+
+   
 private:
    quan::joystick m_js;
 public:

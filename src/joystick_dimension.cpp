@@ -1,4 +1,7 @@
 
+/*
+ probably should be renamed joystick_mapping or some such
+*/
 #include <joystick_dimension.hpp>
 
 namespace {
@@ -17,6 +20,7 @@ namespace {
    static constexpr uint8_t yaw_idx = 3;   // yaw on ch 3
    static constexpr uint8_t flap_idx = 4;   // yaw on ch 3
    static constexpr uint8_t spoiler_idx = 5;   // yaw on ch 3
+   static constexpr uint8_t flight_mode = 7; 
 
    /**
     * @brief joystick channel direction of raw joystick input, 
