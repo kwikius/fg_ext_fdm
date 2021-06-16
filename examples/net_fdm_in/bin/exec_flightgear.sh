@@ -2,9 +2,7 @@
 #!/bin/bash
 fgfs \
 --in-air \
---aircraft=easystar  \
---fg-scenery=/usr/share/games/flightgear/Scenery \
---fg-aircraft=/home/andy/cpp/projects/aerfpilot/Tools/autotest/aircraft/ \
+--aircraft=ask13  \
 --units-meters \
 --altitude=800 \
 --lat=50.7381 \

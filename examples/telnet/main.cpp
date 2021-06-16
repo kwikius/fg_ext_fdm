@@ -1,80 +1,143 @@
 
 
+
 #include <cstring>
 #include <cstdlib>
+#include <cassert>
 
+#include <chrono>
+#include <thread>
 #include <iostream>
+
+#include <quan/fs/get_file_dir.hpp>
 #include "fgfs_telnet.hpp"
+#include "joystick.hpp"
 
-#include <quan/joystick.hpp>
-#include <quan/utility/timer.hpp>
-
-/*
- Control FlightGear using telnet to write properties from joystick
- derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
-*/
+/**
+*  
+**/
 
 namespace {
 
-   QUAN_QUANTITY_LITERAL(time,us);
+  /**
+    * @brief Try starting telnet. Keep trying for 20 s
+    * @return true if telnet started
+   **/
+   bool start_telnet();
 
-   void usleep(quan::time::us const & t)
-   {
-      ::usleep(static_cast<unsigned long>(t.numeric_value()));
-   }
+  /**
+    * @brief Get telnet interface. Throws logic error if not available
+   **/
+   fgfs_telnet & get_telnet();
 
-   static constexpr double joystick_half_range = 32767.0;
-
-   static constexpr uint8_t roll_idx = 0;  // roll on ch 0
-   static constexpr uint8_t pitch_idx = 1; // pitch on ch 1
-   static constexpr uint8_t throttle_idx = 2;
-   static constexpr uint8_t yaw_idx = 3;   // yaw on ch 3
+  /**
+    * @brief send joystick control values via telnet
+   **/
+   void set_controls(fgfs_telnet & telnet, joystick_t const & js );
 
    /**
-   @brief joystick channel direction , either 1 or -1
-   **/
-   static constexpr int32_t js_sign []= {
-      1,   // roll
-      1,   // pitch
-      1,   // throttle
-      -1   // yaw
-   };
-
-   void set_controls(fgfs_telnet & f, quan::joystick & js )
-   {
-      auto get_js_percent = [&js](int32_t i)->double {
-         return static_cast<double>(js.get_channel(i) * js_sign[i]) / joystick_half_range ;
-      };
-      f.set("/controls/flight/aileron",get_js_percent(roll_idx));
-      f.set("/controls/flight/elevator",get_js_percent(pitch_idx));
-      f.set("/controls/flight/rudder",get_js_percent(yaw_idx));
-      f.set("/controls/engines/engine[0]/throttle", get_js_percent(throttle_idx) + 1.0);
-   }
+     * @brief clean up telnet
+    **/
+   void stop_telnet();
 }
+
+/// @brief required for chrono literals to be found
+using namespace std::chrono_literals;
 
 int main(const int argc, const char *argv[])
 {
-   try {
-      fgfs_telnet f("localhost",5501);
-      quan::joystick js{"/dev/input/js0"};
-      quan::timer<> timer;
-      quan::time::us t = timer();
+   int pid = fork();
+   if (pid == 0){
+      ///@brief run flightgear in child process
+      auto const path = quan::fs::get_file_dir(argv[0]) + "/exec_flightgear.sh";
+      return system(path.c_str());
+   }else{
+      if ( pid > 0){
+         try {
+            fprintf(stdout, "Flightgear telnet demo\n");
 
-      for (;;){
-         set_controls(f,js);
-         auto const dt = timer() - t;
-         t = timer();
-         usleep(20000_us - dt );
+            joystick_t js("/dev/input/js0");
+            
+            if ( ! start_telnet() ){
+               std::cout << "no sign of FlightGear starting.. giving up\n";
+               return 1;
+            }
+
+            for (;;){
+               auto const now = std::chrono::steady_clock::now();
+               set_controls(get_telnet(),js);
+               std::this_thread::sleep_until(now + 20ms);
+            }
+
+            return EXIT_SUCCESS;
+
+         } catch (const char s[]) {
+            std::cerr << "Error: " << s << ": " << strerror(errno) << std::endl;
+            stop_telnet();
+            return EXIT_FAILURE;
+         } catch (std::exception & e){
+
+            std::cerr << "Error: " << e.what() << std::endl;
+            stop_telnet();
+            return EXIT_FAILURE;
+         } catch (...) {
+            std::cerr << "Error: unknown exception" << std::endl;
+            stop_telnet();
+            return EXIT_FAILURE;
+         }
+      }else{
+         std::cout << "fork failed\n";
+         return -1;
       }
-      return EXIT_SUCCESS;
-   } catch (const char s[]) {
-      std::cerr << "Error: " << s << ": " << strerror(errno) << std::endl;
-      return EXIT_FAILURE;
-   } catch (std::exception & e){
-      std::cerr << "Error: " << e.what() << std::endl;
-      return EXIT_FAILURE;
-   } catch (...) {
-      std::cerr << "Error: unknown exception" << std::endl;
-      return EXIT_FAILURE;
+   }
+}
+
+namespace {
+
+   void set_controls(fgfs_telnet & telnet, joystick_t const & js )
+   {
+      telnet.set("/controls/flight/aileron",js.roll.get());
+      telnet.set("/controls/flight/elevator",js.pitch.get());
+      telnet.set("/controls/flight/rudder",js.yaw.get());
+      telnet.set("/controls/engines/engine[0]/throttle", js.throttle.get());
+   }
+}
+
+namespace{
+
+    fgfs_telnet* ptelnet = nullptr;
+
+    fgfs_telnet& get_telnet()
+    {
+      if ( ptelnet != nullptr){
+         return *ptelnet;
+      }else{
+         throw std::logic_error("telnet isn't available");
+      }
+    }
+
+   void stop_telnet()
+   {
+      delete ptelnet;
+      ptelnet = nullptr;
+   }
+
+   bool start_telnet()
+   {
+      if ( ptelnet){
+         return true;
+      }
+      auto const start = std::chrono::steady_clock::now();
+      while ( (std::chrono::steady_clock::now() - start) < 20s){
+         try {
+            ptelnet = new fgfs_telnet("localhost",5501);
+            break;
+         }catch(const char s[]){
+            assert(ptelnet == nullptr);
+            std::cout << "Waiting for flightgear to start...\n";
+            std::this_thread::sleep_for(2s);
+         }
+      }
+      return ptelnet != nullptr;
    }
 }

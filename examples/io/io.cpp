@@ -114,7 +114,7 @@ int main(const int argc, const char *argv[])
                if( fdm_in.poll(10.0_s)){
                   fdm_in.update();
                   output_fdm(fdm_in.get_fdm());
-                  if (!fc.update()){
+                  if (!fc.update(fdm_in.get_fdm())){
                      fprintf(stdout,"flight controller update failed - quitting\n");
                      break;
                   }

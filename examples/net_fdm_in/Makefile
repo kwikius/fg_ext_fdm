@@ -14,8 +14,8 @@ endif
 BUILD_DIR = build
 BIN_DIR = bin
 SRC_DIR = ../../src
-CXX = g++-7
-CXXFLAGS = -fmax-errors=1 -std=c++14 -I$(QUAN_ROOT) -I$(SRC_DIR)/include
+CXX = g++-9
+CXXFLAGS = -fmax-errors=1 -std=c++2a -fconcepts -I$(QUAN_ROOT) -I$(SRC_DIR)/include
 CXXLIBS = -lpthread
 
 TARGET = net_fdm_in.exe

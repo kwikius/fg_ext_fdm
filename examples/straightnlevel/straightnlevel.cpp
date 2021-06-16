@@ -10,7 +10,7 @@
 #include <quan/out/angle.hpp>
 #include <quan/fs/get_file_dir.hpp>
 #include <quan/constrain.hpp>
-#include <quan/utility/timer.hpp>
+#include <quan/conversion/chrono.hpp>
 
 #include <fgfs_telnet.hpp>
 #include <fgfs_fdm_in.hpp>
@@ -18,6 +18,9 @@
 #include <flight_mode.hpp>
 #include <joystick.hpp>
 #include <sensors.hpp>
+
+#include <quan/three_d/vect.hpp>
+#include <quan/three_d/quat.hpp>
 /*
  Copyright (C) Andy Little 2021
  Derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
@@ -31,6 +34,7 @@
 **/
 
 namespace {
+
 
   using namespace std::chrono_literals;
 
@@ -66,13 +70,36 @@ namespace {
       fflush(stdout);
    }
 
-  
+  // very simple
    struct straight_n_level_controller{
 
-      straight_n_level_controller(fgfs_fdm_in const & fdm)
-      :m_fdm{fdm}{}
+      straight_n_level_controller(){}
+
+      static  straight_n_level_controller & get_self(){return m_self;}
       private:
-         fgfs_fdm_in const & m_fdm;
+        
+         bool update(autoconv_FGNetFDM const & fdm)
+         {
+            // euler angles
+            quan::three_d::vect<quan::angle::rad> const attitude = 
+            {
+               fdm.phi.get(), // roll
+               fdm.theta.get(),  // pitch 
+               fdm.psi.get()     // yaw
+            };
+            auto qpose = quat_from_euler<double>(attitude);
+
+            // rotate around yaw
+            // get heading
+            return false;
+         }
+         //singleton interface
+         static bool self_update(autoconv_FGNetFDM const & fdm)
+         {
+            return get_self().update(fdm);
+         }
+
+         static straight_n_level_controller m_self;
    };
 
    /**
@@ -144,28 +171,17 @@ int main(const int argc, const char *argv[])
 
             // OK start control loop.
             // Joystick should now be controlling aircraft in FlightGear
-            // @todo actual framerate seems to be 30 Hz or so
-            int count = 0;
-            auto start = std::chrono::steady_clock::now();
             for (;;){
-             
+               auto const now = std::chrono::steady_clock::now();
                /**
                  * @brief We should run at Flightgear fdm update rate, set on cmdline in --telnet... to 60 times a sec
                  * Here is the elastic, if FlightGear is late
                **/
                if( fdm_in.poll(10.0_s)){
-                  if (++count == 100){
-                    auto const now = std::chrono::steady_clock::now() ;
-                    std::chrono::duration<double> const dt = (now - start) ;
-                    start = now;
-                    fprintf(stdout,"frameperiod = %f ms\n",dt.count() * 10.0);
-                    count = 0;
-                  }
-
                   fdm_in.update();
                   output_fdm(fdm_in.get_fdm());
                   get_flight_mode();
-                  if (!fc.update()){
+                  if (!fc.update(fdm_in.get_fdm())){
                      fprintf(stdout,"flight controller update failed - quitting\n");
                      break;
                   }
@@ -174,7 +190,7 @@ int main(const int argc, const char *argv[])
                }
                // wake up just before the next fdm packet is available from FlightGear (hopefully!)
                //@todo wakeup on SIGIO ?, 
-               //std::this_thread::sleep_until(now + 15ms);
+               std::this_thread::sleep_until(now + to_chrono(get_frame_rate()) - 1ms);
             }
             return EXIT_SUCCESS;
          } catch (const char s[]) {

@@ -1,11 +1,8 @@
 #!/bin/bash
 /usr/games/fgfs \
 --in-air \
---aircraft=Easystar \
+--aircraft=ask13 \
 --prop:/input/joysticks/js[0]=0 \
---enable-terrasync \
---fg-scenery=/home/andy/.fgfs/TerraSync \
---fg-aircraft=/home/andy/cpp/projects/aerfpilot/Tools/autotest/aircraft/ \
 --units-meters \
 --altitude=800 \
 --lat=50.7381 \

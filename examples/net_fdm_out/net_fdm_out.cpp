@@ -94,7 +94,7 @@ namespace {
    quan::frequency::Hz constexpr update_frequency = 1.0 / update_period; 
 
    /**
-    *  @brief current model pose in World Frame
+    *  @brief current model pose in World/Model Frame dependent on cmd line args
     *  @param x = roll  ( x axis)
     *  @param y = pitch ( y axis)
     *  @param z = yaw   ( z axis)
