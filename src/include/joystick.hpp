@@ -1,6 +1,7 @@
 #ifndef FG_EXT_JOYSTICK_HPP_INCLUDED
 #define FG_EXT_JOYSTICK_HPP_INCLUDED
 
+#include <autoconv_net_fdm.hpp>
 #include <control_source_concept.hpp>
 #include <joystick_dimension.hpp>
 /**
@@ -38,6 +39,11 @@ public:
    joystick_dimension<FlightDimension::Throttle> const throttle;
    joystick_dimension<FlightDimension::Flap> const  flap;
    joystick_dimension<FlightDimension::Spoiler> const spoiler;
+
+   using fdm_update_callback_t = bool(*)(autoconv_FGNetFDM const &);
+   // joystick doesnt require an up callback
+   // since it doesnt depend on update of fdm
+   fdm_update_callback_t get_update_callback()const { return nullptr;}
 };
 
 #endif // FG_EXT_JOYSTICK_HPP_INCLUDED

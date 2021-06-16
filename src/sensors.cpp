@@ -13,13 +13,15 @@ namespace {
 /**
  * @brief get FlightGear current framerate via telnet
  * Generally only do at startup
+ * alternatively could try at runtime via /fdm[0]/jsbsim[0]/simulation[0]/sim-time-sec (double)
+ * but difficult to know guarantee that is tied to fdm output
 **/
 quan::frequency::Hz get_frame_rate(fgfs_telnet & t)
 {
 
-   int32_t model_hz;
-   if ( t.get("/sim[0]/model-hz",model_hz)){
-      m_frame_rate = quan::frequency::Hz{model_hz};
+   int32_t frame_rate;
+   if ( t.get("/sim[0]/frame-rate",frame_rate)){
+      m_frame_rate = quan::frequency::Hz{frame_rate};
       return  m_frame_rate;
    }else{
       throw std::runtime_error("get_frame_rate from telnet failed\n");

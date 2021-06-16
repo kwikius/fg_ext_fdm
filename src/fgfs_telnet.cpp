@@ -11,6 +11,8 @@
 #include <fgfs_telnet.hpp>
 
 /*
+ Copyright (C) Andy Little 2021
+
  derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
 */
 
@@ -220,13 +222,12 @@ bool fgfs_telnet::get(const char* prop, T& val)
 template <typename T>
 bool fgfs_telnet::set(const char* prop, T const & val) const
 {
-  return ll_telnet<T>::set(*this,prop,val);
+   return ll_telnet<T>::set(*this,prop,val);
 }
 /**
  * @todo add explicit specialisations as reqd
 **/
 
 template bool fgfs_telnet::set<double>(char const *,double const &) const;
-
 template bool fgfs_telnet::get<double>(char const *,double &);
 template bool fgfs_telnet::get<int32_t>(char const *,int32_t &);
