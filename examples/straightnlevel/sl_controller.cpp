@@ -58,6 +58,13 @@ namespace {
          = {-fdm.phi.get(),fdm.theta.get(),-fdm.psi.get()};
       return quan::three_d::quat_from_euler<double>(euler);
    }
+
+   quan::three_d::vect<quan::angle::deg> target_pose
+   ={
+      10_deg,
+         0_deg,
+            90_deg
+   };
 }
 
 bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms const & time_step) 
@@ -67,11 +74,29 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 
    auto const & qpose = the_aircraft.get_pose();
 
+   quan::angle::deg target_heading = 0_deg;
+   quan::angle::deg current_heading = fdm.psi.get();
+   quan::angle::deg heading_diff = -(target_heading - current_heading);
+   double const diff_roll_gain = 0.2; // max 10 degrees roll
+   quan::angle::deg diff_roll = quan::constrain(heading_diff * diff_roll_gain, -10_deg, 10_deg) ;
+   rad_per_s target_yaw_rate = 180.0_deg_per_s;
+   quan::three_d::vect<quan::angle::deg> target_pose = {
+      diff_roll, 
+      0_deg,
+      0_deg
+   };
+   
+   //want the yaw angle between current heading and target heading
+   // translate into a roll proportional to yaw angle
+   
+   auto const qtarget_pose = unit_quat(quat_from_euler<double>(target_pose));
+
+   auto const qdiff = unit_quat(hamilton_product(qpose, conjugate(qtarget_pose)));
    /// @brief Body Frame axis unit vectors
    auto const body_frame_v = make_vect(
-      qpose * W.x,
-      qpose * W.y,
-      qpose * W.z
+      qdiff * W.x,
+      qdiff * W.y,
+      qdiff * W.z
    );
 
    auto const & inertia_v = the_aircraft.get_inertia();
@@ -97,6 +122,6 @@ sl_controller::float_type sl_controller::get_pitch() const
 
 sl_controller::float_type sl_controller::get_yaw() const  
 {
-   return the_aircraft.get_yaw_control_value();
+   return 0.0;//the_aircraft.get_yaw_control_value();
 }
 

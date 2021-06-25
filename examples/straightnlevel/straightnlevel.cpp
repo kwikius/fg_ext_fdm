@@ -160,6 +160,7 @@ int main(const int argc, const char *argv[])
                if( fdm_in.poll(10.0_s)){
                   fdm_in.update();
                   output_fdm(fdm_in.get_fdm());
+                  // switch flight mode
                   auto fm = get_flight_mode();
                   if (fm != cur_flight_mode){
                      cur_flight_mode = fm;
