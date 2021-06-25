@@ -12,7 +12,7 @@
 --lon=0.2494 \
 --vc=10 \
 --glideslope=-3 \
---native-fdm=socket,out,50,127.0.0.1,5600,udp \
---telnet=socket,bi,60,localhost,5501,tcp
+--native-fdm=socket,out,10,127.0.0.1,5600,udp \
+--telnet=socket,bi,30,localhost,5501,tcp
 
 

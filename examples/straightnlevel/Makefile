@@ -26,6 +26,11 @@ OBJECTS = $(patsubst %.o, $(BUILD_DIR)/%.o, \
  flight_controller.o \
  joystick_dimension.o \
  sensors.o \
+ sl_controller.o \
+ aircraft.o \
+ get_P_torque.o \
+ get_I_torque.o \
+ get_D_torque.o \
 )
 
 TARGET = straightnlevel.exe

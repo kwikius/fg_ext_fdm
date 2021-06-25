@@ -18,7 +18,6 @@ namespace {
 **/
 quan::frequency::Hz get_frame_rate(fgfs_telnet & t)
 {
-
    int32_t frame_rate;
    if ( t.get("/sim[0]/frame-rate",frame_rate)){
       m_frame_rate = quan::frequency::Hz{frame_rate};
@@ -29,6 +28,7 @@ quan::frequency::Hz get_frame_rate(fgfs_telnet & t)
 }
 /**
 * @brief get locally stored framerate ( dont telnet to Flightgear)
+* N.B best to call via telnet
 **/
 quan::frequency::Hz get_frame_rate()
 {
@@ -38,3 +38,8 @@ quan::frequency::Hz get_frame_rate()
       throw std::runtime_error("get_frame_rate not initialised\n"); 
    }
 }
+
+ 
+
+
+

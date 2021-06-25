@@ -14,13 +14,15 @@
 
 #include <fgfs_telnet.hpp>
 #include <fgfs_fdm_in.hpp>
-#include <flight_controller.hpp>
+#include <manual_flight_controller.hpp>
+#include <sl_controller.hpp>
 #include <flight_mode.hpp>
 #include <joystick.hpp>
 #include <sensors.hpp>
 
 #include <quan/three_d/vect.hpp>
 #include <quan/three_d/quat.hpp>
+#include <quan/angular_velocity.hpp>
 /*
  Copyright (C) Andy Little 2021
  Derived from https://sourceforge.net/p/flightgear/flightgear/ci/next/tree/scripts/example/fgfsclient.cxx
@@ -33,6 +35,8 @@
  * Write control values to FlightGear from joystick using telnet
 **/
 
+QUAN_USING_ANGULAR_VELOCITY
+
 namespace {
 
 
@@ -41,8 +45,10 @@ namespace {
    /**
     * @brief user defined time literal e.g 100_us
     **/
-   QUAN_QUANTITY_LITERAL(time,us);
+   QUAN_QUANTITY_LITERAL(time,ms);
    QUAN_QUANTITY_LITERAL(time,s);
+
+   quan::time::ms time_step = 100_ms;
 
    // indirect system floating point type e.g for microcontrollers rpi etc
    using float_type = quan::quantity_traits::default_value_type;
@@ -56,51 +62,19 @@ namespace {
       quan::angle::deg const roll = fdm.phi.get();
       quan::angle::deg const pitch = fdm.theta.get();
       quan::angle::deg const yaw = fdm.psi.get();
-      auto const alt = fdm.altitude.get(); //
-      auto const agl = fdm.agl.get();
-      quan::velocity::m_per_s const airspeed = fdm.vcas.get();
-      fprintf(stdout,"\rr=%6.1f p=%6.1f y=%6.1f a=%6.1f ag=%6.1f v= %5.1f",
+/*
+      deg_per_s const roll_rate = fdm.phidot.get();
+      deg_per_s const pitch_rate = fdm.thetadot.get();
+      deg_per_s const yaw_rate = fdm.psidor.get();
+*/
+      fprintf(stdout,"\rx=%6.1f y=%6.1f z=%6.1ff,ts= %6.1f",
          roll.numeric_value(),
          pitch.numeric_value(),
          yaw.numeric_value(),
-         alt.numeric_value(),
-         agl.numeric_value(),
-         airspeed.numeric_value()
+         time_step.numeric_value()
       );
       fflush(stdout);
    }
-
-  // very simple
-   struct straight_n_level_controller{
-
-      straight_n_level_controller(){}
-
-      static  straight_n_level_controller & get_self(){return m_self;}
-      private:
-        
-         bool update(autoconv_FGNetFDM const & fdm)
-         {
-            // euler angles
-            quan::three_d::vect<quan::angle::rad> const attitude = 
-            {
-               fdm.phi.get(), // roll
-               fdm.theta.get(),  // pitch 
-               fdm.psi.get()     // yaw
-            };
-            auto qpose = quat_from_euler<double>(attitude);
-
-            // rotate around yaw
-            // get heading
-            return false;
-         }
-         //singleton interface
-         static bool self_update(autoconv_FGNetFDM const & fdm)
-         {
-            return get_self().update(fdm);
-         }
-
-         static straight_n_level_controller m_self;
-   };
 
    /**
     * @brief telnet read is not available immediately at start up
@@ -146,7 +120,7 @@ int main(const int argc, const char *argv[])
             fprintf(stdout, "Flightgear fc demo\n");
 
             // create the joystick
-            joystick_t js("/dev/input/js0");
+            //joystick_t js();
 
             // create the class to receive fdm from FlightGear
             fgfs_fdm_in fdm_in("localhost",5600);
@@ -163,9 +137,14 @@ int main(const int argc, const char *argv[])
             setup(fdm_in,telnet_out);
             /**
              * Have joystick input, fdm and telnet so...
-             * Create flight controller and plug in telnet and joystick. 
+             * Create manual controller and plug in telnet and joystick. 
              **/
-            flight_controller fc(telnet_out,js);
+            manual_flight_controller mfc(telnet_out,"/dev/input/js0");
+
+            sl_controller slc{telnet_out};
+
+            flight_mode cur_flight_mode = flight_mode::Manual;
+            abc_flight_controller* fc = &mfc;
 
             fprintf(stdout,"FlightGear running\n");
 
@@ -173,15 +152,25 @@ int main(const int argc, const char *argv[])
             // Joystick should now be controlling aircraft in FlightGear
             for (;;){
                auto const now = std::chrono::steady_clock::now();
+               time_step = 1.f/get_frame_rate(telnet_out);
+               
                /**
-                 * @brief We should run at Flightgear fdm update rate, set on cmdline in --telnet... to 60 times a sec
+                 * @brief We should run at Flightgear fdm update rate, set on cmdline in --telnet... to 30 times a sec
                  * Here is the elastic, if FlightGear is late
                **/
                if( fdm_in.poll(10.0_s)){
                   fdm_in.update();
                   output_fdm(fdm_in.get_fdm());
-                  get_flight_mode();
-                  if (!fc.update(fdm_in.get_fdm())){
+                  auto fm = get_flight_mode();
+                  if (fm != cur_flight_mode){
+                     cur_flight_mode = fm;
+                     if(fm == flight_mode::Manual) {
+                        fc = &mfc;
+                     }else{
+                        fc = &slc;
+                     }
+                  }
+                  if (!fc->update(fdm_in.get_fdm(),time_step)){
                      fprintf(stdout,"flight controller update failed - quitting\n");
                      break;
                   }
@@ -190,7 +179,7 @@ int main(const int argc, const char *argv[])
                }
                // wake up just before the next fdm packet is available from FlightGear (hopefully!)
                //@todo wakeup on SIGIO ?, 
-               std::this_thread::sleep_until(now + to_chrono(get_frame_rate()) - 1ms);
+               std::this_thread::sleep_until(now + 19ms);
             }
             return EXIT_SUCCESS;
          } catch (const char s[]) {
