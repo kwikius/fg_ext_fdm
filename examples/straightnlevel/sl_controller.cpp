@@ -55,7 +55,7 @@ namespace {
    get_pose( autoconv_FGNetFDM const & fdm)
    {
       quan::three_d::vect<quan::angle::deg> const euler 
-         = {fdm.phi.get(),fdm.theta.get(),fdm.psi.get()};
+         = {-fdm.phi.get(),fdm.theta.get(),fdm.psi.get()};
       return quan::three_d::quat_from_euler<double>(euler);
    }
 
@@ -89,8 +89,8 @@ namespace {
       // accumulate torque PID terms
       quan::three_d::vect<quan::torque::N_m> torque = 
          get_P_torque(body_frame_v,inertia_v,the_aircraft.get_Kp())
-          + get_I_torque(body_frame_v,inertia_v,time_step)
-             + get_D_torque(the_aircraft.get_angular_velocity(),inertia_v,the_aircraft.get_Kd()) 
+        //  + get_I_torque(body_frame_v,inertia_v,time_step)
+            + get_D_torque(the_aircraft.get_angular_velocity(),inertia_v,the_aircraft.get_Kd()) 
       ;
       the_aircraft.set_control_torque(torque);
    }

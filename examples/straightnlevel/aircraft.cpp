@@ -30,13 +30,13 @@ namespace {
    QUAN_QUANTITY_LITERAL(time,s)
 
    /// @brief for differential error stopping time from current angular velocity
-   auto constexpr tstop = 1_s;
+   auto constexpr tstop = 1.0_s;
 
    ///  @brief correcting angular accel limit
    auto constexpr accelK = 0.5/quan::pow<2>(tstop);
 }
 
-quan::time::s aircraft::get_Kd() const  { return tstop/2;}
+quan::time::s aircraft::get_Kd() const  { return tstop *2;}
 
 quan::reciprocal_time2::per_s2 aircraft::get_Kp() const { return accelK;}
 
@@ -74,9 +74,9 @@ namespace{
 
    /// @brief scaling torque per degree of control deflection per axis
    auto constexpr torque_per_deg = quan::three_d::make_vect(
-      100.0_N_m/ 1_rad, // aileron
-      100.0_N_m/ 1_rad,// elevator
-      100.0_N_m/ 1_rad// rudder
+      1.0_N_m/ 1_rad, // aileron
+      1.0_N_m/ 1_rad,// elevator
+      1.0_N_m/ 1_rad// rudder
    );
 
    /// @brief limit of allowable control deflection

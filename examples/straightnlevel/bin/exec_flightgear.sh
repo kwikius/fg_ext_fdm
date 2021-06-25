@@ -7,7 +7,7 @@
 --fg-scenery=/home/andy/.fgfs/TerraSync \
 --fg-aircraft=/home/andy/cpp/projects/aerfpilot/Tools/autotest/aircraft/ \
 --units-meters \
---altitude=800 \
+--altitude=2000 \
 --lat=50.7381 \
 --lon=0.2494 \
 --vc=10 \
