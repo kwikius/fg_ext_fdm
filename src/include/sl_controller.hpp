@@ -12,7 +12,7 @@ struct sl_controller final : abc_flight_controller{
    float_type get_pitch() const  override;
    float_type get_yaw() const  override;
 
-   float_type get_throttle() const override{return 0; }
+   float_type get_throttle() const override{return 1; }
    float_type get_spoiler() const override{return 0; }
    float_type get_flap() const  override{return 0; }
 

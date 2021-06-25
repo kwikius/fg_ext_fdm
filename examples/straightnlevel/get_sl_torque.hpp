@@ -1,11 +1,6 @@
 #ifndef ARDUIMU_VISUALISATION_GET_PID_TORQUE_HPP_INCLUDED
 #define ARDUIMU_VISUALISATION_GET_PID_TORQUE_HPP_INCLUDED
 
-///**
-//No idea why GL/glut.h needs to be included but without including it integrator doesnt work correctly!!
-//**/
-//#include <GL/glut.h>
-
 //#define QUAN_STRAIGHT_N_LEVEL_FILTER
 
 #include <quan/time.hpp>

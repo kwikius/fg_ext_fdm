@@ -33,27 +33,27 @@ namespace {
    auto constexpr tstop = 1.0_s;
 
    ///  @brief correcting angular accel limit
-   auto constexpr accelK = 0.5/quan::pow<2>(tstop);
+   auto constexpr accelK = 1.0/quan::pow<2>(tstop);
 }
 
-quan::time::s aircraft::get_Kd() const  { return tstop *2;}
+quan::time::s aircraft::get_Kd() const  { return tstop*1.175 ;}
 
 quan::reciprocal_time2::per_s2 aircraft::get_Kp() const { return accelK;}
 
 namespace{
 
-   // iow tstop = sqrt( 0.5/accelK)
+
    /// @brief point masses on each axis
    quan::three_d::vect<quan::mass::kg> constexpr mass = {
       0.7_kg, //along x axis
-      1_kg, //along y axis
+      0.8_kg, //along y axis
       0.1_kg // along z axis
    };
 
    /// @brief point mass distances on each axis
    quan::three_d::vect<quan::length::m> constexpr  dist = {
      0.5_m, //along x axis
-     1_m, //along y axis
+     0.8_m, //along y axis
      0.1_m // along z axis
    };
 

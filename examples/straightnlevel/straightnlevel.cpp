@@ -122,9 +122,6 @@ int main(const int argc, const char *argv[])
             
             fprintf(stdout, "Flightgear fc demo\n");
 
-            // create the joystick
-            //joystick_t js();
-
             // create the class to receive fdm from FlightGear
             fgfs_fdm_in fdm_in("localhost",5600);
 
@@ -143,8 +140,7 @@ int main(const int argc, const char *argv[])
              * Create manual controller and plug in telnet and joystick. 
              **/
             manual_flight_controller mfc(telnet_out,"/dev/input/js0");
-
-            sl_controller slc{telnet_out};
+            sl_controller slfc{telnet_out};
 
             flight_mode cur_flight_mode = flight_mode::Manual;
             abc_flight_controller* fc = &mfc;
@@ -170,7 +166,7 @@ int main(const int argc, const char *argv[])
                      if(fm == flight_mode::Manual) {
                         fc = &mfc;
                      }else{
-                        fc = &slc;
+                        fc = &slfc;
                      }
                   }
                   if (!fc->update(fdm_in.get_fdm(),time_step)){

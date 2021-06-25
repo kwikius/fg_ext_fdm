@@ -1,7 +1,7 @@
 #!/bin/bash
 /usr/games/fgfs \
 --in-air \
---aircraft=Easystar \
+--aircraft=ask13 \
 --prop:/input/joysticks/js[0]=0 \
 --enable-terrasync \
 --fg-scenery=/home/andy/.fgfs/TerraSync \

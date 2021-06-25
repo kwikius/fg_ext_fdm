@@ -47,61 +47,41 @@ namespace {
       return {
          fdm.phidot.get(),
          fdm.thetadot.get(),
-         fdm.psidot.get()
+         -fdm.psidot.get()
       };
    }
 
    quan::three_d::quat<double>
    get_pose( autoconv_FGNetFDM const & fdm)
    {
-      quan::three_d::vect<quan::angle::deg> const euler 
-         = {-fdm.phi.get(),fdm.theta.get(),fdm.psi.get()};
+      quan::three_d::vect<quan::angle::rad> const euler 
+         = {-fdm.phi.get(),fdm.theta.get(),-fdm.psi.get()};
       return quan::three_d::quat_from_euler<double>(euler);
    }
-
-   /// @brief update aircraft pose from current anguar velocity for next timestep
-   void update_body_frame(autoconv_FGNetFDM const & fdm,quan::time::ms const & time_step)
-   {
-
-      the_aircraft.set_angular_velocity(get_angular_velocity(fdm));
-      the_aircraft.set_pose(get_pose(fdm));
-/*
-      auto const turn = angular_velocity * time_step;
-      auto const magturn = magnitude(turn);
-      if ( magturn > 0.001_deg){
-         auto const qturn = quatFrom(unit_vector(turn),magturn);
-         auto const qpose = unit_quat(hamilton_product(the_aircraft.get_pose(),qturn));
-
-         the_aircraft.set_pose(qpose);
-         the_aircraft.set_angular_velocity(angular_velocity);
-      }
-*/
-      auto const & qpose = the_aircraft.get_pose();
-
-      /// @brief Body Frame axis unit vectors
-      auto const body_frame_v = make_vect(
-         qpose * W.x,
-         qpose * W.y,
-         qpose * W.z
-      );
-
-      auto const & inertia_v = the_aircraft.get_inertia();
-      // accumulate torque PID terms
-      quan::three_d::vect<quan::torque::N_m> torque = 
-         get_P_torque(body_frame_v,inertia_v,the_aircraft.get_Kp())
-          + get_I_torque(body_frame_v,inertia_v,time_step)
-            + get_D_torque(the_aircraft.get_angular_velocity(),inertia_v,the_aircraft.get_Kd()) 
-      ;
-      the_aircraft.set_control_torque(torque);
-   }
-
-   /// @brief simulation time step 
-   quan::time::ms constexpr sim_time_step = 33_ms;
 }
 
 bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms const & time_step) 
 {
-   update_body_frame(fdm,time_step);
+   the_aircraft.set_angular_velocity(get_angular_velocity(fdm));
+   the_aircraft.set_pose(get_pose(fdm));
+
+   auto const & qpose = the_aircraft.get_pose();
+
+   /// @brief Body Frame axis unit vectors
+   auto const body_frame_v = make_vect(
+      qpose * W.x,
+      qpose * W.y,
+      qpose * W.z
+   );
+
+   auto const & inertia_v = the_aircraft.get_inertia();
+   // accumulate torque PID terms
+   quan::three_d::vect<quan::torque::N_m> torque = 
+      get_P_torque(body_frame_v,inertia_v,the_aircraft.get_Kp())
+       + get_I_torque(body_frame_v,inertia_v,time_step)
+         + get_D_torque(the_aircraft.get_angular_velocity(),inertia_v,the_aircraft.get_Kd()) 
+   ;
+   the_aircraft.set_control_torque(torque);
    return true;
 }
 
