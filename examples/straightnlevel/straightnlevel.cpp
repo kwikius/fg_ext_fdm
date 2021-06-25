@@ -59,19 +59,22 @@ namespace {
    **/
    void output_fdm(autoconv_FGNetFDM const & fdm)
    {
-      quan::angle::deg const roll = fdm.phi.get();
-      quan::angle::deg const pitch = fdm.theta.get();
-      quan::angle::deg const yaw = fdm.psi.get();
-/*
+//      quan::angle::deg const roll = fdm.phi.get();
+//      quan::angle::deg const pitch = fdm.theta.get();
+//      quan::angle::deg const yaw = fdm.psi.get();
+
       deg_per_s const roll_rate = fdm.phidot.get();
       deg_per_s const pitch_rate = fdm.thetadot.get();
-      deg_per_s const yaw_rate = fdm.psidor.get();
-*/
-      fprintf(stdout,"\rx=%6.1f y=%6.1f z=%6.1ff,ts= %6.1f",
-         roll.numeric_value(),
-         pitch.numeric_value(),
-         yaw.numeric_value(),
-         time_step.numeric_value()
+      deg_per_s const yaw_rate = fdm.psidot.get();
+
+      fprintf(stdout,"\rx=%6.1f y=%6.1f z=%6.1f",
+         roll_rate.numeric_value().numeric_value(),
+         pitch_rate.numeric_value().numeric_value(),
+         yaw_rate.numeric_value().numeric_value()
+//         roll.numeric_value(),
+//         pitch.numeric_value(),
+//         yaw.numeric_value(),
+//         time_step.numeric_value()
       );
       fflush(stdout);
    }

@@ -45,14 +45,14 @@ namespace{
    // iow tstop = sqrt( 0.5/accelK)
    /// @brief point masses on each axis
    quan::three_d::vect<quan::mass::kg> constexpr mass = {
-      0.5_kg, //along x axis
+      0.7_kg, //along x axis
       1_kg, //along y axis
       0.1_kg // along z axis
    };
 
    /// @brief point mass distances on each axis
    quan::three_d::vect<quan::length::m> constexpr  dist = {
-     0.4_m, //along x axis
+     0.5_m, //along x axis
      1_m, //along y axis
      0.1_m // along z axis
    };
