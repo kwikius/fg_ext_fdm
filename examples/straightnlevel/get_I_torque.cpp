@@ -21,14 +21,14 @@ namespace {
 #endif
 
    /// @todo torque integral constant time_step is divided by
-   auto constexpr kIntegral = quan::pow<3>(quan::time::s{2});
-   constexpr auto torque_lim_All = 0.5_N_m;
+   auto constexpr kIntegral = quan::pow<3>(quan::time::s{0.5});
+   constexpr auto torque_lim_All = 0.01_N_m;
 
    /// @ brief limiting torque per axis
    quan::three_d::vect<quan::torque::N_m> constexpr torque_lim = {
-      torque_lim_All,
-      torque_lim_All,
-      torque_lim_All
+      0_N_m,
+      0.01_N_m,
+      0.0_N_m
    };
 
    quan::torque::N_m 

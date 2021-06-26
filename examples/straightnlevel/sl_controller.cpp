@@ -45,8 +45,15 @@ namespace {
    get_angular_velocity( autoconv_FGNetFDM const & fdm)
    {
       return {
+#if defined FG_EASYSTAR
+
+        fdm.phidot.get(),
+         fdm.thetadot.get(),
+#else
          fdm.phidot.get(),
          fdm.thetadot.get(),
+#endif
+       
          -fdm.psidot.get()
       };
    }
@@ -74,16 +81,34 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 
    auto const & qpose = the_aircraft.get_pose();
 
-   quan::angle::deg target_heading = 0_deg;
+   quan::angle::deg target_heading = 315_deg;
    quan::angle::deg current_heading = fdm.psi.get();
+
+   if ( target_heading > 180_deg){
+     target_heading = target_heading - 360_deg;
+   }
+   if ( current_heading > 180_deg){
+     current_heading = current_heading - 360_deg;
+   }
    quan::angle::deg heading_diff = -(target_heading - current_heading);
-   double const diff_roll_gain = 0.2; // max 10 degrees roll
-   quan::angle::deg diff_roll = quan::constrain(heading_diff * diff_roll_gain, -10_deg, 10_deg) ;
+#if defined FG_EASYSTAR
+   double const diff_roll_gain = 0.4; 
+#else
+   double const diff_roll_gain = 0.25; 
+#endif
+   quan::time::s g1 = 600_ms;
+   quan::angle::deg diff_roll1 = fdm.psidot.get() * g1;
+   quan::angle::deg diff_roll = quan::constrain(heading_diff * diff_roll_gain - diff_roll1, -30_deg, 30_deg)  ;
+
    rad_per_s target_yaw_rate = 180.0_deg_per_s;
    quan::three_d::vect<quan::angle::deg> target_pose = {
       diff_roll, 
+#if defined FG_EASYSTAR
+      -3_deg,
+#else
       0_deg,
-      0_deg
+#endif
+      target_heading
    };
    
    //want the yaw angle between current heading and target heading

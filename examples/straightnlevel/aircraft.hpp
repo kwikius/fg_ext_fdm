@@ -1,14 +1,12 @@
 #ifndef ARDUIMU_VISUALISATION_AIRCRAFT_HPP_INCLUDED
 #define ARDUIMU_VISUALISATION_AIRCRAFT_HPP_INCLUDED
 
-
 #include <quan/time.hpp>
 #include <quan/torque.hpp>
 #include <quan/moment_of_inertia.hpp>
 #include <quan/angular_velocity.hpp>
 #include <quan/reciprocal_time2.hpp>
 #include <quan/three_d/quat.hpp>
-//#include <straight_n_level/pid/get_sl_torque.hpp>
 
 struct aircraft{
 

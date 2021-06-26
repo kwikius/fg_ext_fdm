@@ -7,8 +7,8 @@
 #include <quan/torque.hpp>
 #include <quan/mass.hpp>
 #include <quan/moment_of_inertia.hpp>
-//#include <straight_n_level/pid/get_sl_torque.hpp>
 
+#include "sl_controller.hpp"
 #include "aircraft.hpp"
 
 QUAN_USING_ANGULAR_VELOCITY
@@ -29,14 +29,24 @@ namespace {
    QUAN_QUANTITY_LITERAL(time,ms)
    QUAN_QUANTITY_LITERAL(time,s)
 
+#if defined FG_EASYSTAR
    /// @brief for differential error stopping time from current angular velocity
    auto constexpr tstop = 1.0_s;
 
    ///  @brief correcting angular accel limit
-   auto constexpr accelK = 1.0/quan::pow<2>(tstop);
-}
+   auto constexpr accelK = 0.5/quan::pow<2>(tstop);
+#else
+   auto constexpr tstop = 1.0_s;
 
+   ///  @brief correcting angular accel limit
+   auto constexpr accelK = 1.0/quan::pow<2>(tstop);
+#endif
+}
+#if defined FG_EASYSTAR
+quan::time::s aircraft::get_Kd() const  { return tstop*1.25 ;}
+#else
 quan::time::s aircraft::get_Kd() const  { return tstop*1.175 ;}
+#endif
 
 quan::reciprocal_time2::per_s2 aircraft::get_Kp() const { return accelK;}
 
@@ -101,11 +111,4 @@ float aircraft::get_yaw_control_value() const
    return quan::constrain(m_control_torque.z / max_torque.z, -1.0,1.0);
 }
 
-//quan::three_d::vect<quan::angle::deg> aircraft::get_control_deflections() const
-//{
-//   return{  
-//      quan::constrain(-m_control_torque.x/torque_per_deg.x,-control_defl_lim,control_defl_lim),
-//      quan::constrain(-m_control_torque.y/torque_per_deg.y,-control_defl_lim,control_defl_lim),
-//      quan::constrain(-m_control_torque.z/torque_per_deg.z,-control_defl_lim,control_defl_lim)
-//   };
-//}
+
