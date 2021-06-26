@@ -92,13 +92,13 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
    }
    quan::angle::deg heading_diff = -(target_heading - current_heading);
 #if defined FG_EASYSTAR
-   double const diff_roll_gain = 0.4; 
+   double const diff_roll_gain = 0.5; 
 #else
    double const diff_roll_gain = 0.25; 
 #endif
-   quan::time::s g1 = 600_ms;
+   quan::time::s g1 = 700_ms;
    quan::angle::deg diff_roll1 = fdm.psidot.get() * g1;
-   quan::angle::deg diff_roll = quan::constrain(heading_diff * diff_roll_gain - diff_roll1, -30_deg, 30_deg)  ;
+   quan::angle::deg diff_roll = quan::constrain(heading_diff * diff_roll_gain + diff_roll1, -30_deg, 30_deg)  ;
 
    rad_per_s target_yaw_rate = 180.0_deg_per_s;
    quan::three_d::vect<quan::angle::deg> target_pose = {
