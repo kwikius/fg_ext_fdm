@@ -4,7 +4,7 @@
 
 #include <quan/mass.hpp>
 #include <quan/length.hpp>
-
+#include <quan/out/angle.hpp>
 #include <quan/three_d/rotation.hpp>
 #include <quan/angular_velocity.hpp>
 #include <quan/atan2.hpp>
@@ -45,15 +45,9 @@ namespace {
    get_angular_velocity( autoconv_FGNetFDM const & fdm)
    {
       return {
-#if defined FG_EASYSTAR
 
-        fdm.phidot.get(),
+        - fdm.phidot.get(),
          fdm.thetadot.get(),
-#else
-         fdm.phidot.get(),
-         fdm.thetadot.get(),
-#endif
-       
          -fdm.psidot.get()
       };
    }
@@ -81,7 +75,7 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 
    auto const & qpose = the_aircraft.get_pose();
 
-   quan::angle::deg target_heading = 315_deg;
+   quan::angle::deg target_heading = 333_deg;
    quan::angle::deg current_heading = fdm.psi.get();
 
    if ( target_heading > 180_deg){
@@ -91,6 +85,8 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
      current_heading = current_heading - 360_deg;
    }
    quan::angle::deg heading_diff = -(target_heading - current_heading);
+
+   std::cout << "heading_diff = " << heading_diff <<'\n';
 #if defined FG_EASYSTAR
    double const diff_roll_gain = 0.5; 
 #else
