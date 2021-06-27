@@ -24,6 +24,7 @@ namespace {
    /// @brief local quantity literals
    QUAN_QUANTITY_LITERAL(angle,deg)
    QUAN_QUANTITY_LITERAL(time,ms)
+   QUAN_QUANTITY_LITERAL(time,s)
 
    /// @brief World Frame axis unit vectors
    auto constexpr W = make_vect(
@@ -75,7 +76,7 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 
    auto const & qpose = the_aircraft.get_pose();
 
-   quan::angle::deg target_heading = 333_deg;
+   quan::angle::deg target_heading = 0_deg;
    quan::angle::deg current_heading = fdm.psi.get();
 
    if ( target_heading > 180_deg){
@@ -84,23 +85,35 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
    if ( current_heading > 180_deg){
      current_heading = current_heading - 360_deg;
    }
-   quan::angle::deg heading_diff = -(target_heading - current_heading);
+   quan::angle::deg heading_diff = (target_heading - current_heading);
+   if ( heading_diff > 180_deg){
+      heading_diff -= 360_deg;
+   }else{
+      if (heading_diff <= -180_deg){
+         heading_diff += 360_deg;
+      }
+   }
 
-   std::cout << "heading_diff = " << heading_diff <<'\n';
+
 #if defined FG_EASYSTAR
-   double const diff_roll_gain = 0.5; 
+   double const diff_roll_gain = 0.4; 
 #else
    double const diff_roll_gain = 0.25; 
 #endif
-   quan::time::s g1 = 700_ms;
-   quan::angle::deg diff_roll1 = fdm.psidot.get() * g1;
-   quan::angle::deg diff_roll = quan::constrain(heading_diff * diff_roll_gain + diff_roll1, -30_deg, 30_deg)  ;
+   quan::time::s g1 = 3.2_s;
+  // quan::time::s g1 = 4_s;
+   quan::angle::deg diff_roll0 = -quan::constrain(heading_diff * diff_roll_gain,-10_deg, 10_deg);
+   quan::angle::deg diff_roll1 = quan::constrain(-fdm.psidot.get() * g1,- 45_deg,45_deg);
+   quan::angle::deg diff_roll = diff_roll0 - diff_roll1   ;
 
-   rad_per_s target_yaw_rate = 180.0_deg_per_s;
+      std::cout << "hd = " << heading_diff <<'\n';
+      std::cout << "dr0 = " << diff_roll0 <<'\n';
+      std::cout << "dr1 = " << diff_roll1 <<"\n";
+      std::cout << "dr = " << diff_roll <<"\n\n";
    quan::three_d::vect<quan::angle::deg> target_pose = {
       diff_roll, 
 #if defined FG_EASYSTAR
-      -3_deg,
+      -0.2_deg,
 #else
       0_deg,
 #endif
@@ -124,7 +137,7 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
    // accumulate torque PID terms
    quan::three_d::vect<quan::torque::N_m> torque = 
       get_P_torque(body_frame_v,inertia_v,the_aircraft.get_Kp())
-       + get_I_torque(body_frame_v,inertia_v,time_step)
+      // + get_I_torque(body_frame_v,inertia_v,time_step)
          + get_D_torque(the_aircraft.get_angular_velocity(),inertia_v,the_aircraft.get_Kd()) 
    ;
    the_aircraft.set_control_torque(torque);
