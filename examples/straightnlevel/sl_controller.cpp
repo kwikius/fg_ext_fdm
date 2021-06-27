@@ -23,6 +23,7 @@ namespace {
 
    /// @brief local quantity literals
    QUAN_QUANTITY_LITERAL(angle,deg)
+   QUAN_QUANTITY_LITERAL(angle,rad)
    QUAN_QUANTITY_LITERAL(time,ms)
    QUAN_QUANTITY_LITERAL(time,s)
 
@@ -76,7 +77,7 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 
    auto const & qpose = the_aircraft.get_pose();
 
-   quan::angle::deg target_heading = 0_deg;
+   quan::angle::deg target_heading = 120_deg;
    quan::angle::deg current_heading = fdm.psi.get();
 
    if ( target_heading > 180_deg){
@@ -96,14 +97,15 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 
 
 #if defined FG_EASYSTAR
-   double const diff_roll_gain = 0.4; 
+   double const diff_roll_gain = 0.35; 
+   quan::time::s const g1 = 2.95_s;
 #else
    double const diff_roll_gain = 0.25; 
+   quan::time::s g1 = 4_s;
 #endif
-   quan::time::s g1 = 3.2_s;
-  // quan::time::s g1 = 4_s;
-   quan::angle::deg diff_roll0 = -quan::constrain(heading_diff * diff_roll_gain,-10_deg, 10_deg);
-   quan::angle::deg diff_roll1 = quan::constrain(-fdm.psidot.get() * g1,- 45_deg,45_deg);
+
+   quan::angle::deg diff_roll0 = -quan::constrain(heading_diff * diff_roll_gain,-45_deg, 45_deg);
+   quan::angle::deg diff_roll1 = quan::constrain(-fdm.psidot.get() * g1,- 90_deg,90_deg);
    quan::angle::deg diff_roll = diff_roll0 - diff_roll1   ;
 
       std::cout << "hd = " << heading_diff <<'\n';
@@ -117,20 +119,26 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 #else
       0_deg,
 #endif
-      target_heading
+      0_deg
    };
    
    //want the yaw angle between current heading and target heading
    // translate into a roll proportional to yaw angle
+
+   quan::three_d::quat<double> qpose1 = 
+   quan::three_d::quat_from_euler<double>(
+      quan::three_d::vect<quan::angle::rad>{-fdm.phi.get(),fdm.theta.get(),0.0_rad}
+   );
+   
    
    auto const qtarget_pose = unit_quat(quat_from_euler<double>(target_pose));
 
-   auto const qdiff = unit_quat(hamilton_product(qpose, conjugate(qtarget_pose)));
+   auto const qdiff1 = unit_quat(hamilton_product(qpose1, conjugate(qtarget_pose)));
    /// @brief Body Frame axis unit vectors
    auto const body_frame_v = make_vect(
-      qdiff * W.x,
-      qdiff * W.y,
-      qdiff * W.z
+      qdiff1 * W.x,
+      qdiff1 * W.y,
+      qdiff1 * W.z
    );
 
    auto const & inertia_v = the_aircraft.get_inertia();
