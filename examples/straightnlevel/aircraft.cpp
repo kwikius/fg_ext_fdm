@@ -43,7 +43,7 @@ namespace {
 #endif
 }
 #if defined FG_EASYSTAR
-quan::time::s aircraft::get_Kd() const  { return tstop* 2.7 ;}
+quan::time::s aircraft::get_Kd() const  { return tstop* 1.5 ;}
 #else
 quan::time::s aircraft::get_Kd() const  { return tstop*1.175 ;}
 #endif
@@ -51,7 +51,6 @@ quan::time::s aircraft::get_Kd() const  { return tstop*1.175 ;}
 quan::reciprocal_time2::per_s2 aircraft::get_Kp() const { return accelK;}
 
 namespace{
-
 
    /// @brief point masses on each axis
    quan::three_d::vect<quan::mass::kg> constexpr mass = {
@@ -95,9 +94,11 @@ aircraft::get_inertia()const
 namespace{
 
    /// @brief scaling torque per degree of control deflection per axis
+   // increase for less control movement
+   // decress for more control movement
    auto constexpr torque_per_deg = quan::three_d::make_vect(
       1.0_N_m/ 1_rad, // aileron
-      1.0_N_m/ 1_rad,// elevator
+      0.5_N_m/ 1_rad,// elevator
       1.0_N_m/ 1_rad// rudder
    );
 
