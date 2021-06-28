@@ -96,15 +96,21 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
    }
 
 #if defined FG_EASYSTAR
-   double const diff_roll_gain = 0.35; 
-   quan::time::s const g1 = 2.95_s;
+   double const diff_roll_gain = 0.5; 
+   quan::time::s const g1 = 10_s;
+
+   quan::time::s const g2 = 10_s;
 #else
    double const diff_roll_gain = 0.25; 
    quan::time::s g1 = 4_s;
 #endif
 
+   rad_per_s const max_yaw_rate = 30.0_deg_per_s;
+   rad_per_s const target_yaw_rate = quan::constrain(heading_diff/g2, - max_yaw_rate, max_yaw_rate);
+
    quan::angle::deg diff_roll0 = -quan::constrain(heading_diff * diff_roll_gain,-45_deg, 45_deg);
-   quan::angle::deg diff_roll1 = quan::constrain(-fdm.psidot.get() * g1,- 90_deg,90_deg);
+   //quan::angle::deg diff_roll1 = quan::constrain( ( target_yaw_rate-fdm.psidot.get()) * g1,- 90_deg,90_deg);
+   quan::angle::deg diff_roll1 = quan::constrain( ( -fdm.psidot.get() + target_yaw_rate) * g1,- 90_deg,90_deg);
    quan::angle::deg diff_roll = diff_roll0 - diff_roll1   ;
 
       std::cout << "hd = " << heading_diff <<'\n';
