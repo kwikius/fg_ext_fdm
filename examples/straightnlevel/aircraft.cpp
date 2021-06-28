@@ -43,7 +43,7 @@ namespace {
 #endif
 }
 #if defined FG_EASYSTAR
-quan::time::s aircraft::get_Kd() const  { return tstop*1 ;}
+quan::time::s aircraft::get_Kd() const  { return tstop*0.9 ;}
 #else
 quan::time::s aircraft::get_Kd() const  { return tstop*1.175 ;}
 #endif
