@@ -69,8 +69,8 @@ namespace{
    /// @brief point mass distances on each axis
    quan::three_d::vect<quan::length::m> constexpr  dist = {
 #if defined FG_EASYSTAR
-     0.7_m, //along x axis
-     0.8_m, //along y axis
+     0.6_m, //along x axis
+     0.7_m, //along y axis
      0.1_m // along z axis
 #else
      0.5_m, //along x axis

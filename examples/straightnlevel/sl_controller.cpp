@@ -77,7 +77,7 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 
    auto const & qpose = the_aircraft.get_pose();
 
-   quan::angle::deg target_heading = 120_deg;
+   quan::angle::deg target_heading = 285_deg;
    quan::angle::deg current_heading = fdm.psi.get();
 
    if ( target_heading > 180_deg){
@@ -97,7 +97,7 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 
 
 #if defined FG_EASYSTAR
-   double const diff_roll_gain = 0.35; 
+   double const diff_roll_gain = 0.37; 
    quan::time::s const g1 = 2.95_s;
 #else
    double const diff_roll_gain = 0.25; 
