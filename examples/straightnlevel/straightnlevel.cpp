@@ -49,7 +49,7 @@ namespace {
    QUAN_QUANTITY_LITERAL(time,ms);
    QUAN_QUANTITY_LITERAL(time,s);
 
-   quan::time::ms time_step = 100_ms;
+   quan::time::ms constexpr time_step = 100_ms;
 
    // indirect system floating point type e.g for microcontrollers rpi etc
    using float_type = quan::quantity_traits::default_value_type;
@@ -115,51 +115,51 @@ namespace {
 
    int frame_count = 0;
    uint32_t cur_unix_time = 0;
-   quan::time::ms calced_frame_period = -1_ms;
 
-   quan::time::ms get_time_step1(autoconv_FGNetFDM const & fdm)
-   {
-      uint32_t const unix_time = fdm.cur_time.get();
-      uint32_t diff = unix_time - cur_unix_time;
-      //fprintf(stdout, "utd = %u\n",);
-      cur_unix_time = unix_time;
-
-      if (diff == 0){
-          ++frame_count;
-      }else{
-          ++frame_count;
-         fprintf(stdout,"fc = %u\n",frame_count);
-          frame_count = 0U;
-      }
-//      if ( cur_unix_time == 0){
-//         fprintf(stdout,"xx 0\n");
-//         cur_unix_time = unix_time;
-//         frame_count = -1;
+//
+//   quan::time::ms get_time_step1(autoconv_FGNetFDM const & fdm)
+//   {
+//      uint32_t const unix_time = fdm.cur_time.get();
+//      uint32_t diff = unix_time - cur_unix_time;
+//      //fprintf(stdout, "utd = %u\n",);
+//      cur_unix_time = unix_time;
+//
+//      if (diff == 0){
+//          ++frame_count;
 //      }else{
-//         if ( cur_unix_time == unix_time){
-//             fprintf(stdout,"xx 1\n");
-//             ++frame_count;
-//         }else{
-//            if ( frame_count == -1){
-//               fprintf(stdout,"xx 2\n");
-//               frame_count = 0;
-//            }else{
-//               if ( frame_count > 0){
-//                 // fprintf(stdout,"\ncfc = %u\n", frame_count );
-//                  fprintf(stdout,"xx 3\n");
-//                  calced_frame_period = ((unix_time - cur_unix_time) * 1000_ms)/ frame_count;
-//                  cur_unix_time = unix_time;
-//                  frame_count = 0;
-//               }else{
-//                 fprintf(stdout,"xx 4\n");
-//               }
-//            }
-//         }
+//          ++frame_count;
+//         fprintf(stdout,"fc = %u\n",frame_count);
+//          frame_count = 0U;
 //      }
-    //  fprintf(stdout,"\ncalced fp = %f\n", calced_frame_period.numeric_value() );
-      fflush(stdout);
-      return calced_frame_period;
-   }
+////      if ( cur_unix_time == 0){
+////         fprintf(stdout,"xx 0\n");
+////         cur_unix_time = unix_time;
+////         frame_count = -1;
+////      }else{
+////         if ( cur_unix_time == unix_time){
+////             fprintf(stdout,"xx 1\n");
+////             ++frame_count;
+////         }else{
+////            if ( frame_count == -1){
+////               fprintf(stdout,"xx 2\n");
+////               frame_count = 0;
+////            }else{
+////               if ( frame_count > 0){
+////                 // fprintf(stdout,"\ncfc = %u\n", frame_count );
+////                  fprintf(stdout,"xx 3\n");
+////                  calced_frame_period = ((unix_time - cur_unix_time) * 1000_ms)/ frame_count;
+////                  cur_unix_time = unix_time;
+////                  frame_count = 0;
+////               }else{
+////                 fprintf(stdout,"xx 4\n");
+////               }
+////            }
+////         }
+////      }
+//    //  fprintf(stdout,"\ncalced fp = %f\n", calced_frame_period.numeric_value() );
+//      fflush(stdout);
+//      return calced_frame_period;
+//   }
 }
 
 int main(const int argc, const char *argv[])
@@ -204,8 +204,8 @@ int main(const int argc, const char *argv[])
             // Joystick should now be controlling aircraft in FlightGear
             for (;;){
                auto const now = std::chrono::steady_clock::now();
-               time_step = 1.f/get_frame_rate(telnet_out);
-               get_time_step1(fdm_in.get_fdm());
+  
+            //   get_time_step1(fdm_in.get_fdm());
              //  std::cout << "\nfg time step = " << time_step <<'\n';
                /**
                  * @brief We should run at Flightgear fdm update rate, set on cmdline in --telnet... to 30 times a sec

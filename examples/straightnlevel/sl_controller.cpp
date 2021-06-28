@@ -126,7 +126,6 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
       quan::three_d::vect<quan::angle::rad>{-fdm.phi.get(),fdm.theta.get(),0.0_rad}
    );
    
-   
    auto const qtarget_pose = unit_quat(quat_from_euler<double>(target_pose));
 
    auto const qdiff1 = unit_quat(hamilton_product(qpose1, conjugate(qtarget_pose)));
