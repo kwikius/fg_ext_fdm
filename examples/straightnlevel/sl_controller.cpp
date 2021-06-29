@@ -1,10 +1,11 @@
 #include <sl_controller.hpp>
 
 #include <quan/constrain.hpp>
-
+#include <quan/utility/timer.hpp>
 #include <quan/mass.hpp>
 #include <quan/length.hpp>
 #include <quan/out/angle.hpp>
+#include <quan/out/time.hpp>
 #include <quan/three_d/rotation.hpp>
 #include <quan/angular_velocity.hpp>
 #include <quan/atan2.hpp>
@@ -68,8 +69,18 @@ namespace {
          0_deg,
             90_deg
    };
+
+
+
+   quan::time::s now = 0_s;
+
+   quan::angle::deg target_heading = 0_deg;
+
+   quan::angle::deg constexpr heading_incr = 180_deg;
+       
 }
 
+   quan::timer<> timer;
 bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms const & time_step) 
 {
    the_aircraft.set_angular_velocity(get_angular_velocity(fdm));
@@ -77,12 +88,17 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
 
    auto const & qpose = the_aircraft.get_pose();
 
-   quan::angle::deg target_heading = 25_deg;
-   quan::angle::deg current_heading = fdm.psi.get();
+   std::cout << timer()* 100 <<'\n';
 
+   if ( (timer() - now)* 100 > 60_s){
+      target_heading += heading_incr;
+      now = timer();
+   }
    if ( target_heading > 180_deg){
      target_heading = target_heading - 360_deg;
    }
+
+   quan::angle::deg current_heading = fdm.psi.get();
    if ( current_heading > 180_deg){
      current_heading = current_heading - 360_deg;
    }

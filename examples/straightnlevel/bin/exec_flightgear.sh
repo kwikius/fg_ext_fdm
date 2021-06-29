@@ -8,8 +8,8 @@
 --fg-aircraft=/home/andy/cpp/projects/aerfpilot/Tools/autotest/aircraft/ \
 --units-meters \
 --altitude=5000 \
---lat=50.7381 \
---lon=0.2494 \
+--lat=50.7086 \
+--lon=-1.5566 \
 --vc=10 \
 --glideslope=-3 \
 --native-fdm=socket,out,10,127.0.0.1,5600,udp \
