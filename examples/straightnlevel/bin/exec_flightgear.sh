@@ -13,6 +13,7 @@
 --vc=10 \
 --glideslope=-3 \
 --native-fdm=socket,out,10,127.0.0.1,5600,udp \
---telnet=socket,bi,30,localhost,5501,tcp
+--telnet=socket,bi,30,localhost,5501,tcp \
+--httpd=8080
 
 

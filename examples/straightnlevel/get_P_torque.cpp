@@ -1,5 +1,4 @@
 
-
 #include <quan/constrain.hpp>
 #include <quan/three_d/rotation.hpp>
 #include <quan/angular_velocity.hpp>

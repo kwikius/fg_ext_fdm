@@ -31,7 +31,7 @@ namespace {
 
 #if defined FG_EASYSTAR
    /// @brief for differential error stopping time from current angular velocity
-   auto constexpr tstop = 1.0_s;
+   auto constexpr tstop = 1.1_s;
 
    ///  @brief correcting angular accel limit
    auto constexpr accelK = 0.5/quan::pow<2>(tstop);

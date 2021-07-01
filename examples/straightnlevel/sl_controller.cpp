@@ -1,7 +1,8 @@
+
+#include <time.h>
 #include <sl_controller.hpp>
 
 #include <quan/constrain.hpp>
-#include <quan/utility/timer.hpp>
 #include <quan/mass.hpp>
 #include <quan/length.hpp>
 #include <quan/out/angle.hpp>
@@ -21,12 +22,12 @@ QUAN_USING_ANGULAR_VELOCITY
 namespace {
    aircraft the_aircraft;
 
-
    /// @brief local quantity literals
    QUAN_QUANTITY_LITERAL(angle,deg)
    QUAN_QUANTITY_LITERAL(angle,rad)
    QUAN_QUANTITY_LITERAL(time,ms)
    QUAN_QUANTITY_LITERAL(time,s)
+   QUAN_QUANTITY_LITERAL(reciprocal_time,per_s)
 
    /// @brief World Frame axis unit vectors
    auto constexpr W = make_vect(
@@ -70,29 +71,33 @@ namespace {
             90_deg
    };
 
-
-
    quan::time::s now = 0_s;
 
-   quan::angle::deg target_heading = 0_deg;
+   quan::angle::deg target_heading = 45_deg;
 
-   quan::angle::deg constexpr heading_incr = 180_deg;
-       
+   quan::angle::deg constexpr heading_incr = 90_deg;
+
+   uint64_t gettime()
+   {
+      timespec ts;
+      clock_gettime(CLOCK_MONOTONIC,&ts);
+      return static_cast<uint64_t>(ts.tv_sec) * 1000 + static_cast<uint64_t>(ts.tv_nsec)/1000000;
+   }
+   uint64_t start = 0;
 }
 
-   quan::timer<> timer;
+  // quan::timer<> timer;
 bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms const & time_step) 
 {
    the_aircraft.set_angular_velocity(get_angular_velocity(fdm));
    the_aircraft.set_pose(get_pose(fdm));
 
-   auto const & qpose = the_aircraft.get_pose();
+   auto const now = gettime();
 
-   std::cout << timer()* 100 <<'\n';
-
-   if ( (timer() - now)* 100 > 60_s){
+   if ( (now - start) >= 60000){
       target_heading += heading_incr;
-      now = timer();
+      start = now;
+      printf("New heading : % 6.2f deg at %lu s\n",target_heading.numeric_value(),(now - start)/1000);
    }
    if ( target_heading > 180_deg){
      target_heading = target_heading - 360_deg;
@@ -112,32 +117,26 @@ bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms con
    }
 
 #if defined FG_EASYSTAR
-   double const diff_roll_gain = 0.5; 
-   quan::time::s const g1 = 10_s;
-   quan::time::s const g2 = 10_s;
+   quan::time::s const yaw_rate_error_gain = 13_s;
+   //target yaw rate gain 
+   auto const target_yaw_rate_gain = 0.125_per_s;
+
+   quan::angle::deg const cruise_pitch_angle = -0.2_deg;
+   // max_yaw_rate
+   rad_per_s const max_yaw_rate = 90.0_deg_per_s;
 #else
-   double const diff_roll_gain = 0.25; 
-   quan::time::s g1 = 4_s;
+ //  double const diff_roll_gain = 0.25; 
+   quan::time::s const yaw_rate_error_gain = 4_s;
+   quan::angle::deg const cruise_pitch_angle = 0_deg;
+   rad_per_s const max_yaw_rate = 90.0_deg_per_s;
 #endif
 
-   rad_per_s const max_yaw_rate = 30.0_deg_per_s;
-   rad_per_s const target_yaw_rate = quan::constrain(heading_diff/g2, - max_yaw_rate, max_yaw_rate);
+   rad_per_s const target_yaw_rate = quan::constrain(heading_diff*target_yaw_rate_gain, - max_yaw_rate, max_yaw_rate);
+   quan::angle::deg const roll_rate_correction = -quan::constrain( ( target_yaw_rate-fdm.psidot.get()) * yaw_rate_error_gain,- 90_deg,90_deg);
 
-   quan::angle::deg diff_roll0 = -quan::constrain(heading_diff * diff_roll_gain,-45_deg, 45_deg);
-   quan::angle::deg diff_roll1 = quan::constrain( ( target_yaw_rate-fdm.psidot.get()) * g1,- 90_deg,90_deg);
-   quan::angle::deg diff_roll = diff_roll0 - diff_roll1   ;
-
-      std::cout << "hd = " << heading_diff <<'\n';
-      std::cout << "dr0 = " << diff_roll0 <<'\n';
-      std::cout << "dr1 = " << diff_roll1 <<"\n";
-      std::cout << "dr = " << diff_roll <<"\n\n";
    quan::three_d::vect<quan::angle::deg> target_pose = {
-      diff_roll, 
-#if defined FG_EASYSTAR
-      -0.2_deg,
-#else
-      0_deg,
-#endif
+      roll_rate_correction, 
+      cruise_pitch_angle,
       0_deg
    };
     // pose without yaw
