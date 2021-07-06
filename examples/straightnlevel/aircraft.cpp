@@ -13,10 +13,7 @@
 
 QUAN_USING_ANGULAR_VELOCITY
 
-aircraft::aircraft()
-: m_pose{1,0,0,0},
-m_angular_velocity{rad_per_s{0},rad_per_s{0},rad_per_s{0}}
-{}
+aircraft::aircraft(){}
 
 namespace {
 

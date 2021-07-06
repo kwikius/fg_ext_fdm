@@ -20,6 +20,7 @@
 QUAN_USING_ANGULAR_VELOCITY
 
 namespace {
+
    aircraft the_aircraft;
 
    /// @brief local quantity literals
@@ -36,45 +37,20 @@ namespace {
       quan::three_d::vect<double>{0,0,1} // n.b +z is down
    );
 
-   /// @brief defines what a full joystick +ve deflection means per axis
-   quan::three_d::vect<rad_per_s> const max_angular_velocity
-    = {
-       90.0_deg_per_s,   //roll
-        90.0_deg_per_s,  //pitch
-          90.0_deg_per_s  //yaw
-   };
-
    /// @brief derive new angular velocity from joystick positions
    quan::three_d::vect<rad_per_s>
    get_angular_velocity( autoconv_FGNetFDM const & fdm)
    {
       return {
-
-        - fdm.phidot.get(),
-         fdm.thetadot.get(),
+         -fdm.phidot.get(),
+          fdm.thetadot.get(),
          -fdm.psidot.get()
       };
    }
 
-   quan::three_d::quat<double>
-   get_pose( autoconv_FGNetFDM const & fdm)
-   {
-      quan::three_d::vect<quan::angle::rad> const euler 
-         = {-fdm.phi.get(),fdm.theta.get(),-fdm.psi.get()};
-      return quan::three_d::quat_from_euler<double>(euler);
-   }
-
-   quan::three_d::vect<quan::angle::deg> target_pose
-   ={
-      10_deg,
-         0_deg,
-            90_deg
-   };
-
-   quan::time::s now = 0_s;
-
-   quan::angle::deg target_heading = 45_deg;
-
+   //// @brief target heading updated at intervals in autopilot mode
+   quan::angle::deg targetHeading = 45_deg;
+   /// @brief periodic change of heading 
    quan::angle::deg constexpr heading_incr = 90_deg;
 
    uint64_t gettime()
@@ -83,85 +59,106 @@ namespace {
       clock_gettime(CLOCK_MONOTONIC,&ts);
       return static_cast<uint64_t>(ts.tv_sec) * 1000 + static_cast<uint64_t>(ts.tv_nsec)/1000000;
    }
-   uint64_t start = 0;
+   uint64_t frame_start_time = 0;
+
+   quan::angle::deg 
+   constrain_angle(quan::angle::deg a)
+   {
+      while ( a  > 180_deg){
+         a -= 360_deg;
+      }
+      while(a <= -180_deg){
+         a+= 360_deg;
+      }
+      return a;
+   }
 }
 
-  // quan::timer<> timer;
 bool sl_controller::pre_update(autoconv_FGNetFDM const & fdm, quan::time::ms const & time_step) 
 {
-   the_aircraft.set_angular_velocity(get_angular_velocity(fdm));
-   the_aircraft.set_pose(get_pose(fdm));
+   auto const new_frame_start_time = gettime();
 
-   auto const now = gettime();
-
-   if ( (now - start) >= 60000){
-      target_heading += heading_incr;
-      start = now;
-      printf("New heading : % 6.2f deg at %lu s\n",target_heading.numeric_value(),(now - start)/1000);
-   }
-   if ( target_heading > 180_deg){
-     target_heading = target_heading - 360_deg;
+   if ( (new_frame_start_time - frame_start_time) >= 60000){
+      targetHeading = constrain_angle(targetHeading + heading_incr);
+      frame_start_time = new_frame_start_time;
+      printf("New heading : % 6.2f deg\n",targetHeading.numeric_value());
    }
 
-   quan::angle::deg current_heading = fdm.psi.get();
-   if ( current_heading > 180_deg){
-     current_heading = current_heading - 360_deg;
-   }
-   quan::angle::deg heading_diff = (target_heading - current_heading);
-   if ( heading_diff > 180_deg){
-      heading_diff -= 360_deg;
-   }else{
-      if (heading_diff <= -180_deg){
-         heading_diff += 360_deg;
-      }
-   }
+   quan::angle::deg const currentHeading = constrain_angle(fdm.psi.get());
+   quan::angle::deg const headingError = constrain_angle(targetHeading - currentHeading);
 
 #if defined FG_EASYSTAR
-   quan::time::s const yaw_rate_error_gain = 13_s;
+   quan::time::s const yawRateErrorToRollAngleGain = 13_s;
    //target yaw rate gain 
-   auto const target_yaw_rate_gain = 0.125_per_s;
+   auto const headingErrorToYawRateGain = 0.125_per_s;
 
-   quan::angle::deg const cruise_pitch_angle = -0.2_deg;
+   quan::angle::deg const glide_pitch_angle = -0.2_deg;
    // max_yaw_rate
    rad_per_s const max_yaw_rate = 90.0_deg_per_s;
 #else
- //  double const diff_roll_gain = 0.25; 
-   quan::time::s const yaw_rate_error_gain = 4_s;
-   quan::angle::deg const cruise_pitch_angle = 0_deg;
+   quan::time::s const yawRateErrorToRollAngleGain = 4_s;
+   quan::angle::deg const glide_pitch_angle = 0_deg;
    rad_per_s const max_yaw_rate = 90.0_deg_per_s;
 #endif
 
-   rad_per_s const target_yaw_rate = quan::constrain(heading_diff*target_yaw_rate_gain, - max_yaw_rate, max_yaw_rate);
-   quan::angle::deg const roll_rate_correction = -quan::constrain( ( target_yaw_rate-fdm.psidot.get()) * yaw_rate_error_gain,- 90_deg,90_deg);
+   /// @brief target yaw rate to turn the aircraft to target heading
+   rad_per_s const target_yaw_rate = 
+   quan::constrain(
+      headingError*headingErrorToYawRateGain, 
+         -max_yaw_rate, 
+          max_yaw_rate
+      );
 
+   /// @brief control correction to apply to ailerons to get desired yaw rate
+   quan::angle::deg const roll_rate_correction = 
+   -quan::constrain( 
+      ( target_yaw_rate-fdm.psidot.get()) * yawRateErrorToRollAngleGain,
+           -90_deg,
+            90_deg
+      );
+
+   /// @brief desired pose for desired turn as euler angles
+   // Note that we ignore yaw throughout, just relying on roll to turn the aircraft
    quan::three_d::vect<quan::angle::deg> target_pose = {
       roll_rate_correction, 
-      cruise_pitch_angle,
+      glide_pitch_angle,
       0_deg
    };
-    // pose without yaw
-   quan::three_d::quat<double> qpose1 = 
-   quan::three_d::quat_from_euler<double>(
-      quan::three_d::vect<quan::angle::rad>{-fdm.phi.get(),fdm.theta.get(),0.0_rad}
-   );
-   
-   auto const qtarget_pose = unit_quat(quat_from_euler<double>(target_pose));
 
-   auto const qdiff1 = unit_quat(hamilton_product(qpose1, conjugate(qtarget_pose)));
+   /// @brief current pose as quaternion ignoring yaw
+   quan::three_d::quat<double> qCurrentPose = 
+      quan::three_d::quat_from_euler<double>(
+         quan::three_d::vect<quan::angle::rad>{
+            -fdm.phi.get(),
+            fdm.theta.get(),
+            0.0_rad
+         }
+      );
+   
+   auto const qTargetPose = unit_quat(quat_from_euler<double>(target_pose));
+
+   auto const qPoseError = unit_quat(hamilton_product(qCurrentPose, conjugate(qTargetPose)));
    /// @brief Body Frame axis unit vectors
    auto const body_frame_v = make_vect(
-      qdiff1 * W.x,
-      qdiff1 * W.y,
-      qdiff1 * W.z
+      qPoseError * W.x,
+      qPoseError * W.y,
+      qPoseError * W.z
    );
 
    auto const & inertia_v = the_aircraft.get_inertia();
    // accumulate torque PID terms
    quan::three_d::vect<quan::torque::N_m> torque = 
-      get_P_torque(body_frame_v,inertia_v,the_aircraft.get_Kp())
+      get_P_torque(
+            body_frame_v,inertia_v,the_aircraft.get_Kp()
+      )
+      // Note: It is easier to let the actual values sit with some deflection to avoid integrator windup
       // + get_I_torque(body_frame_v,inertia_v,time_step)
-         + get_D_torque(the_aircraft.get_angular_velocity(),inertia_v,the_aircraft.get_Kd()) 
-   ;
+      + get_D_torque(
+            get_angular_velocity(fdm),
+            inertia_v,
+            the_aircraft.get_Kd()
+         );
+
    the_aircraft.set_control_torque(torque);
    return true;
 }
@@ -176,6 +173,7 @@ sl_controller::float_type sl_controller::get_pitch() const
    return the_aircraft.get_pitch_control_value();
 }
 
+// we dont need yaw . We can control the aircraft via pitch and roll
 sl_controller::float_type sl_controller::get_yaw() const  
 {
    return 0.0;//the_aircraft.get_yaw_control_value();
